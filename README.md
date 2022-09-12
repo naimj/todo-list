@@ -1,6 +1,6 @@
 # BIRDZ TODO TEST
 
-Ce répertoire contient deux dossier front et back
+Ce répertoire contient deux dossiers front et back
 
 #FRONT
 
