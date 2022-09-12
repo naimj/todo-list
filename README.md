@@ -1,1 +1,17 @@
-# BIRDZ
+# BIRDZ TODO TEST
+
+Ce répertoire contient deux dossier front et back
+
+#FRONT
+
+install package: 
+npm install
+
+lancer le prohet
+npm run serve
+
+#Back
+
+insérer la base 'birdz.sql' dans phpmyadmin
+
+Enjoy the test
