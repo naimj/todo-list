@@ -7,7 +7,7 @@ Ce répertoire contient deux dossiers front et back
 install package: 
 npm install
 
-lancer le projet front
+lancer le projet front:
 npm run serve
 
 #Back
