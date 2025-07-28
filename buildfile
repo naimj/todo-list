@@ -1,79 +1,83 @@
-# ⚠️ Arrêter en cas d'erreur
+# Stop script on error
 $ErrorActionPreference = "Stop"
 
-# 📅 Générer le nom du dossier cible
+# Enable UTF-8 output for proper character and emoji rendering
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+
+# Set date and target folder name
 $Date = Get-Date -Format "yyyy-MM-dd"
-$Dest = "..\demo_$Date"
+$TargetFolder = "..\demo_$Date"
+$branch = "demo"
 
-Write-Host "📦 Création du livrable demo pour le $Date"
-Write-Host "------------------------------------------"
+Write-Host "📦 Starting build for delivery [$Date]"
+Write-Host "--------------------------------------"
 
-# ❗ Vérifier si le dossier existe déjà
-if (Test-Path $Dest) {
-    Write-Host "❌ Le dossier '$Dest' existe déjà. Supprime-le d'abord ou change la date." -ForegroundColor Red
+# Prevent overwriting if target folder exists
+if (Test-Path $TargetFolder) {
+    Write-Host "❌ Folder '$TargetFolder' already exists. Please remove it or change the date." -ForegroundColor Red
     exit 1
 }
 
-# 1️⃣ Git : s'assurer qu'on est sur demo et à jour
-Write-Host "➡️ Passage sur la branche 'demo' et récupération des modifications..."
-git checkout demo | Out-Null
-git pull origin demo | Out-Null
+# 1️⃣ Checkout and pull latest code from 'demo' branch
+Write-Host "➡️ Switching to branch '$branch' and pulling latest changes..."
+git checkout $branch | Out-Null
+git pull origin $branch | Out-Null
 
-# 2️⃣ Sauvegarder .env si existant, puis copier .env.prod
+# 2️⃣ Backup existing .env and copy .env.prod
 if (Test-Path ".env") {
-    $backupName = ".env.bak.$Date"
-    Copy-Item ".env" $backupName -Force
-    Write-Host "🛡️  Sauvegarde de .env existant : $backupName"
+    $backupEnv = ".env.bak.$Date"
+    Copy-Item ".env" $backupEnv -Force
+    Write-Host "🛡️  Existing .env backed up to $backupEnv"
 }
 
-Write-Host "➡️ Copie de .env.prod vers .env..."
+Write-Host "➡️ Copying .env.prod to .env..."
 Copy-Item ".env.prod" ".env" -Force
 
-# 3️⃣ Nettoyage Laravel
-Write-Host "🧹 Nettoyage des caches Laravel..."
+# 3️⃣ Clear Laravel cache
+Write-Host "🧹 Clearing Laravel caches..."
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
 php artisan optimize:clear
 
-# 4️⃣ Build frontend
-Write-Host "⚙️ Compilation frontend..."
+# 4️⃣ Build frontend (Vue)
+Write-Host "⚙️ Building frontend..."
 npm run build
 
-# 5️⃣ Créer le dossier cible
-Write-Host "📁 Création du dossier : $Dest"
-New-Item -ItemType Directory -Path $Dest -Force | Out-Null
+# 5️⃣ Create target folder
+Write-Host "📁 Creating delivery folder: $TargetFolder"
+New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null
 
-# 6️⃣ Fichiers/répertoires à copier (exclusions)
-$items = Get-ChildItem -Force | Where-Object {
+# 6️⃣ Get items to copy, excluding unnecessary files/folders
+$itemsToCopy = Get-ChildItem -Force | Where-Object {
     $_.Name -notin @("node_modules", ".git", ".gitignore", ".gitattributes")
 }
-$total = $items.Count
-$count = 0
+$totalItems = $itemsToCopy.Count
+$current = 0
 
-# 7️⃣ Copie avec barre de progression
-Write-Host "🚚 Copie avec barre de progression :"
+# 7️⃣ Copy with progress bar
+Write-Host "🚚 Copying files with progress bar..."
 
-foreach ($item in $items) {
-    $src = $item.FullName
-    $dst = Join-Path $Dest $item.Name
+foreach ($item in $itemsToCopy) {
+    $sourcePath = $item.FullName
+    $destinationPath = Join-Path $TargetFolder $item.Name
 
-    # robocopy avec /E pour récursif et options silencieuses
-    robocopy $src $dst /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
-    $count++
-    $progress = [math]::Floor(($count / $total) * 100)
+    # Use robocopy for fast, silent copying
+    robocopy $sourcePath $destinationPath /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
 
-    # Barre de progression simple
-    $barLength = 30
-    $filled = [math]::Round($progress * $barLength / 100)
-    $bar = ("#" * $filled).PadRight($barLength)
+    $current++
+    $percent = [math]::Floor(($current / $totalItems) * 100)
 
-    Write-Host ("`r[{0}] {1}% ({2}/{3})" -f $bar, $progress, $count, $total) -NoNewline
+    # Display progress bar
+    $barWidth = 30
+    $filled = [math]::Round($percent * $barWidth / 100)
+    $bar = ("#" * $filled).PadRight($barWidth)
+
+    Write-Host ("`r[{0}] {1}% ({2}/{3})" -f $bar, $percent, $current, $totalItems) -NoNewline
 }
 
-Write-Host "`n✅ Livrable créé avec succès dans : $Dest"
-
+Write-Host "`n✅ Delivery folder created successfully: $TargetFolder"
 
 ////
 Ouvre PowerShell
