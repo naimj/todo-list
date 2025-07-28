@@ -1,35 +1,33 @@
-# Stop script on error
+# Stop on error
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
+# Variables
 $Date = Get-Date -Format "yyyy-MM-dd"
-$TargetFolder = "..\demo_$Date"
+$FolderName = "demo_$Date"
+$TargetFolder = "..\$FolderName"
+$ZipFile = "..\$FolderName.zip"
 $branch = "demo"
 
-Write-Host "📦 Starting build for delivery [$Date]"
-Write-Host "--------------------------------------"
+Write-Host "📦 Starting delivery build for [$Date]"
+Write-Host "----------------------------------------"
 
-# Stop if target already exists
-if (Test-Path $TargetFolder) {
-    Write-Host "❌ Folder '$TargetFolder' already exists. Please delete it or change the date." -ForegroundColor Red
+# Check if folder or zip already exist
+if (Test-Path $TargetFolder -or (Test-Path $ZipFile)) {
+    Write-Host "❌ A folder or zip named '$FolderName' already exists. Remove it or use another date." -ForegroundColor Red
     exit 1
 }
 
-# Checkout and pull
-Write-Host "➡️ Switching to '$branch' branch and pulling updates..."
+# Git checkout + pull
+Write-Host "➡️ Switching to branch '$branch' and pulling latest changes..."
 git checkout $branch | Out-Null
 git pull origin $branch | Out-Null
 
-# Backup .env and copy .env.prod
-if (Test-Path ".env") {
-    $backup = ".env.bak.$Date"
-    Copy-Item ".env" $backup -Force
-    Write-Host "🛡️  Backed up .env to $backup"
-}
+# Copy .env.prod to .env
 Write-Host "➡️ Copying .env.prod to .env..."
 Copy-Item ".env.prod" ".env" -Force
 
-# Clear Laravel cache
+# Laravel cache cleanup
 Write-Host "🧹 Clearing Laravel caches..."
 php artisan config:clear
 php artisan cache:clear
@@ -37,33 +35,31 @@ php artisan route:clear
 php artisan view:clear
 php artisan optimize:clear
 
-# Build frontend
+# Frontend build
 Write-Host "⚙️ Building frontend..."
 npm run build
 
-# Create target folder
-Write-Host "📁 Creating delivery folder: $TargetFolder"
+# Create delivery folder
+Write-Host "📁 Creating target folder: $TargetFolder"
 New-Item -ItemType Directory -Path $TargetFolder -Force | Out-Null
 
-# Step 1: Copy files (not folders) from root
+# Copy root files
+Write-Host "📄 Copying root-level files..."
 $filesToCopy = Get-ChildItem -File -Force | Where-Object {
     $_.Name -notin @(".gitignore", ".gitattributes")
 }
-
-Write-Host "📄 Copying root files..."
 foreach ($file in $filesToCopy) {
     Copy-Item $file.FullName -Destination (Join-Path $TargetFolder $file.Name) -Force
 }
 
-# Step 2: Copy folders (excluding node_modules and .git)
+# Copy folders
+Write-Host "📁 Copying folders with progress bar..."
 $dirsToCopy = Get-ChildItem -Directory -Force | Where-Object {
     $_.Name -notin @("node_modules", ".git")
 }
-
 $total = $dirsToCopy.Count
 $current = 0
 
-Write-Host "📁 Copying folders with progress bar..."
 foreach ($dir in $dirsToCopy) {
     $source = $dir.FullName
     $destination = Join-Path $TargetFolder $dir.Name
@@ -79,7 +75,15 @@ foreach ($dir in $dirsToCopy) {
     Write-Host ("`r[{0}] {1}% ({2}/{3})" -f $bar, $percent, $current, $total) -NoNewline
 }
 
-Write-Host "`n✅ Delivery folder created successfully: $TargetFolder"
+Write-Host "`n📦 Creating ZIP archive: $ZipFile..."
+Compress-Archive -Path "$TargetFolder\*" -DestinationPath $ZipFile -Force
+
+# Optional: delete folder after zip (uncomment to enable)
+# Remove-Item -Recurse -Force $TargetFolder
+# Write-Host "🗑️ Deleted temporary folder after zip."
+
+Write-Host "✅ Delivery ZIP created successfully: $ZipFile"
+
 
 ////
 Ouvre PowerShell
