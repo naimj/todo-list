@@ -1,4 +1,4 @@
-# ⚠️ Stop en cas d'erreur
+# ⚠️ Arrêter en cas d'erreur
 $ErrorActionPreference = "Stop"
 
 # 📅 Générer le nom du dossier cible
@@ -69,7 +69,7 @@ foreach ($item in $items) {
     $filled = [math]::Round($progress * $barLength / 100)
     $bar = ("#" * $filled).PadRight($barLength)
 
-    Write-Host -NoNewline "`r[$bar] $progress% ($count/$total)"
+    Write-Host ("`r[{0}] {1}% ({2}/{3})" -f $bar, $progress, $count, $total) -NoNewline
 }
 
 Write-Host "`n✅ Livrable créé avec succès dans : $Dest"
