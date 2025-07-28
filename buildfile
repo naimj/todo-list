@@ -1,24 +1,24 @@
-#!/bin/bash
+# Stop en cas d'erreur
+$ErrorActionPreference = "Stop"
 
-set -e
+# 📅 Date pour le dossier
+$Date = Get-Date -Format "yyyy-MM-dd"
+$Dest = "..\demo_$Date"
 
-DATE=$(date +%F)
-DEST="../demo_$DATE"
+Write-Host "📦 Création du livrable demo pour le $Date"
+Write-Host "-------------------------------"
 
-echo "📦 Création du livrable demo pour le $DATE"
-echo "-------------------------------"
-
-# 1️⃣ Git pull sur demo
-echo "➡️ Passage sur la branche 'demo' et pull..."
+# 1️⃣ Git checkout + pull
+Write-Host "➡️ Passage sur la branche 'demo' et pull..."
 git checkout demo
 git pull origin demo
 
-# 2️⃣ Copier .env.prod dans .env
-echo "➡️ Copie de .env.prod vers .env..."
-cp .env.prod .env
+# 2️⃣ Copier .env.prod
+Write-Host "➡️ Copie de .env.prod vers .env..."
+Copy-Item ".env.prod" -Destination ".env" -Force
 
 # 3️⃣ Nettoyage Laravel
-echo "🧹 Nettoyage des caches Laravel..."
+Write-Host "🧹 Nettoyage des caches Laravel..."
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
@@ -26,44 +26,33 @@ php artisan view:clear
 php artisan optimize:clear
 
 # 4️⃣ Build frontend
-echo "⚙️ Compilation frontend..."
+Write-Host "⚙️ Compilation frontend..."
 npm run build
 
-# 5️⃣ Création du dossier livrable
-echo "📁 Création du dossier '$DEST'..."
-mkdir -p "$DEST"
+# 5️⃣ Création dossier cible
+Write-Host "📁 Création du dossier $Dest"
+New-Item -ItemType Directory -Path $Dest -Force | Out-Null
 
-# 6️⃣ Préparation à la copie
-echo "📦 Préparation de la copie avec barre de progression..."
+# 6️⃣ Copier les fichiers (exclure node_modules, .git, .gitignore, .gitattributes)
+Write-Host "🚀 Copie rapide avec exclusions via robocopy..."
 
-# Lister les fichiers et dossiers à copier
-FILES_TO_COPY=()
-for ITEM in * .[^.]*; do
-  if [[ "$ITEM" != "node_modules" && "$ITEM" != ".git" && "$ITEM" != ".gitignore" && "$ITEM" != ".gitattributes" ]]; then
-    FILES_TO_COPY+=("$ITEM")
-  fi
-done
+robocopy . $Dest /E /XD node_modules .git /XF .gitignore .gitattributes
 
-TOTAL=${#FILES_TO_COPY[@]}
-COUNT=0
+Write-Host ""
+Write-Host "✅ Livrable créé avec succès dans : $Dest"
 
-# Fonction pour afficher la barre de progression
-print_progress() {
-  local progress=$(( ($COUNT * 100) / $TOTAL ))
-  local bar_width=40
-  local filled=$(( ($progress * $bar_width) / 100 ))
-  local empty=$(( $bar_width - $filled ))
-  printf "\r[%s%s] %d%% (%d/%d)" \
-    "$(printf '#%.0s' $(seq 1 $filled))" \
-    "$(printf ' %.0s' $(seq 1 $empty))" \
-    "$progress" "$COUNT" "$TOTAL"
-}
+////
+Ouvre PowerShell
 
-# 7️⃣ Copie avec barre de progression
-for ITEM in "${FILES_TO_COPY[@]}"; do
-  cp -r "$ITEM" "$DEST/" 2>/dev/null || true
-  ((COUNT++))
-  print_progress
-done
+Navigue jusqu'au dossier de ton projet Laravel :
 
-echo -e "\n✅ Copie terminée. Livrable créé dans : $DEST"
+powershell
+Copier
+Modifier
+cd C:\chemin\vers\mon-projet
+Lance :
+
+powershell
+Copier
+Modifier
+powershell -ExecutionPolicy Bypass -File build_demo.ps1
