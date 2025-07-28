@@ -19,7 +19,7 @@ git pull origin demo
 echo "➡️ Copie de .env.prod vers .env..."
 cp .env.prod .env
 
-# 3️⃣ Nettoyer les caches Laravel
+# 3️⃣ Nettoyage des caches Laravel
 echo "🧹 Nettoyage des caches Laravel..."
 php artisan config:clear
 php artisan cache:clear
@@ -35,12 +35,14 @@ npm run build
 echo "📁 Création du dossier '$DEST'..."
 mkdir -p "$DEST"
 
-echo "📦 Copie des fichiers dans '$DEST' (exclusions : .git, .gitignore, .gitattributes, node_modules)..."
-rsync -av \
-  --exclude='.git' \
-  --exclude='.gitignore' \
-  --exclude='.gitattributes' \
-  --exclude='node_modules' \
-  ./ "$DEST"
+# 6️⃣ Copie des fichiers
+echo "📦 Copie des fichiers (sans node_modules, .git, .gitignore, .gitattributes)..."
+cp -r . "$DEST"
+
+# Suppression manuelle des dossiers/fichiers exclus
+rm -rf "$DEST/node_modules"
+rm -rf "$DEST/.git"
+rm -f "$DEST/.gitignore"
+rm -f "$DEST/.gitattributes"
 
 echo "✅ Livrable créé avec succès dans : $DEST"
