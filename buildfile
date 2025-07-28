@@ -1,21 +1,33 @@
-# Stop en cas d'erreur
+# ⚠️ Stop en cas d'erreur
 $ErrorActionPreference = "Stop"
 
-# 📅 Date pour le dossier
+# 📅 Générer le nom du dossier cible
 $Date = Get-Date -Format "yyyy-MM-dd"
 $Dest = "..\demo_$Date"
 
 Write-Host "📦 Création du livrable demo pour le $Date"
-Write-Host "-------------------------------"
+Write-Host "------------------------------------------"
 
-# 1️⃣ Git checkout + pull
-Write-Host "➡️ Passage sur la branche 'demo' et pull..."
-git checkout demo
-git pull origin demo
+# ❗ Vérifier si le dossier existe déjà
+if (Test-Path $Dest) {
+    Write-Host "❌ Le dossier '$Dest' existe déjà. Supprime-le d'abord ou change la date." -ForegroundColor Red
+    exit 1
+}
 
-# 2️⃣ Copier .env.prod
+# 1️⃣ Git : s'assurer qu'on est sur demo et à jour
+Write-Host "➡️ Passage sur la branche 'demo' et récupération des modifications..."
+git checkout demo | Out-Null
+git pull origin demo | Out-Null
+
+# 2️⃣ Sauvegarder .env si existant, puis copier .env.prod
+if (Test-Path ".env") {
+    $backupName = ".env.bak.$Date"
+    Copy-Item ".env" $backupName -Force
+    Write-Host "🛡️  Sauvegarde de .env existant : $backupName"
+}
+
 Write-Host "➡️ Copie de .env.prod vers .env..."
-Copy-Item ".env.prod" -Destination ".env" -Force
+Copy-Item ".env.prod" ".env" -Force
 
 # 3️⃣ Nettoyage Laravel
 Write-Host "🧹 Nettoyage des caches Laravel..."
@@ -29,17 +41,39 @@ php artisan optimize:clear
 Write-Host "⚙️ Compilation frontend..."
 npm run build
 
-# 5️⃣ Création dossier cible
-Write-Host "📁 Création du dossier $Dest"
+# 5️⃣ Créer le dossier cible
+Write-Host "📁 Création du dossier : $Dest"
 New-Item -ItemType Directory -Path $Dest -Force | Out-Null
 
-# 6️⃣ Copier les fichiers (exclure node_modules, .git, .gitignore, .gitattributes)
-Write-Host "🚀 Copie rapide avec exclusions via robocopy..."
+# 6️⃣ Fichiers/répertoires à copier (exclusions)
+$items = Get-ChildItem -Force | Where-Object {
+    $_.Name -notin @("node_modules", ".git", ".gitignore", ".gitattributes")
+}
+$total = $items.Count
+$count = 0
 
-robocopy . $Dest /E /XD node_modules .git /XF .gitignore .gitattributes
+# 7️⃣ Copie avec barre de progression
+Write-Host "🚚 Copie avec barre de progression :"
 
-Write-Host ""
-Write-Host "✅ Livrable créé avec succès dans : $Dest"
+foreach ($item in $items) {
+    $src = $item.FullName
+    $dst = Join-Path $Dest $item.Name
+
+    # robocopy avec /E pour récursif et options silencieuses
+    robocopy $src $dst /E /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null
+    $count++
+    $progress = [math]::Floor(($count / $total) * 100)
+
+    # Barre de progression simple
+    $barLength = 30
+    $filled = [math]::Round($progress * $barLength / 100)
+    $bar = ("#" * $filled).PadRight($barLength)
+
+    Write-Host -NoNewline "`r[$bar] $progress% ($count/$total)"
+}
+
+Write-Host "`n✅ Livrable créé avec succès dans : $Dest"
+
 
 ////
 Ouvre PowerShell
