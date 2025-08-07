@@ -1,0 +1,52 @@
+export default function getChartOption({
+  type,
+  labels,
+  series,
+  yAxisNames,
+  typeToolbox = ['bar', 'line'] // 👈 par défaut bar + line
+}) {
+  const isMixed = (type === 'bar-line' || series.some(s => s.type && s.type !== type));
+
+  return {
+    tooltip: { trigger: 'axis' },
+    legend: { data: series.map(s => s.name) },
+    toolbox: {
+      right: '10px',
+      feature: {
+        saveAsImage: { show: true },
+        restore: { show: true },
+        dataZoom: { show: true },
+        magicType: {
+          show: true,
+          type: typeToolbox // 👈 utilisé directement
+        }
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: labels
+    },
+    yAxis: isMixed
+      ? [
+          {
+            type: 'value',
+            name: yAxisNames?.[0] || '',
+            position: 'left'
+          },
+          {
+            type: 'value',
+            name: yAxisNames?.[1] || '',
+            position: 'right'
+          }
+        ]
+      : {
+          type: 'value',
+          name: yAxisNames?.[0] || ''
+        },
+    series: series.map((s, i) => ({
+      ...s,
+      yAxisIndex: isMixed ? i : 0,
+      type: s.type || type
+    }))
+  };
+}
