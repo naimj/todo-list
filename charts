@@ -1,88 +1,11 @@
-export default function getChartOption({
-  type,
-  labels,
-  series,
-  yAxisNames,
-  typeToolbox = ['bar', 'line']
-}) {
-  const isMixed =
-    type === 'bar-line' || series.some((s) => s.type && s.type !== type);
-
-  return {
-    tooltip: { trigger: 'axis' },
-    legend: { data: series.map((s) => s.name) },
-    toolbox: {
-      right: '10px',
-      feature: {
-        saveAsImage: { show: true },
-        restore: { show: true },
-        dataZoom: { show: true },
-        magicType: {
-          show: true,
-          type: typeToolbox
-        }
-      }
-    },
-    xAxis: {
-      type: 'category',
-      data: labels
-    },
-    yAxis: isMixed
-      ? [
-          {
-            type: 'value',
-            name: yAxisNames?.[0] || '',
-            position: 'left'
-          },
-          {
-            type: 'value',
-            name: yAxisNames?.[1] || '',
-            position: 'right'
-          }
-        ]
-      : {
-          type: 'value',
-          name: yAxisNames?.[0] || ''
-        },
-    series: series.map((s, i) => {
-      const sType = s.type || type;
-
-      return {
-        ...s,
-        type: sType,
-        yAxisIndex: isMixed ? i : 0,
-        itemStyle: s.color
-          ? {
-              color: s.color // bar color
-            }
-          : undefined,
-        lineStyle:
-          sType === 'line' && s.color
-            ? { color: s.color } // line stroke color
-            : undefined,
-        areaStyle: sType === 'line' ? { opacity: 0.3 } : undefined // area for line only
-      };
-    })
-  };
-}
-
-getChartOption({
-  type: 'bar-line',
-  labels: ['Jan', 'Fév', 'Mars'],
-  series: [
-    {
-      name: 'CA',
-      type: 'bar',
-      data: [100, 150, 200],
-      color: '#1976d2'
-    },
-    {
-      name: 'Croissance',
-      type: 'line',
-      data: [10, 20, 15],
-      color: '#43a047'
+onMounted(async () => {
+    try {
+        // Load world map data
+        const worldMapData = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
+        const worldGeoJSON = await worldMapData.json();
+        registerMap('world', worldGeoJSON);
+        mapLoaded.value = true;
+    } catch (error) {
+        console.error('Failed to load world map data:', error);
     }
-  ],
-  yAxisNames: ['€', '%'],
-  typeToolbox: ['bar', 'line']
 });
