@@ -1,11 +1,7 @@
-onMounted(async () => {
-    try {
-        // Load world map data
-        const worldMapData = await fetch('https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson');
-        const worldGeoJSON = await worldMapData.json();
-        registerMap('world', worldGeoJSON);
-        mapLoaded.value = true;
-    } catch (error) {
-        console.error('Failed to load world map data:', error);
-    }
-});
+<div class="d-grid ga-1" style="grid-template-columns:auto 1fr;">
+        <div class="text-body-2 font-weight-medium">${name} :</div>
+        <div class="text-body-2">${count} souscriptions</div>
+
+        <div></div>
+        <div class="text-body-2 text-medium-emphasis">${amount.toLocaleString()} $</div>
+      </div>
