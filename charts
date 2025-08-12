@@ -1,7 +1,770 @@
-<div class="d-grid ga-1" style="grid-template-columns:auto 1fr;">
-        <div class="text-body-2 font-weight-medium">${name} :</div>
-        <div class="text-body-2">${count} souscriptions</div>
+<template>
+  <v-app>
+    <v-main>
+      <v-container fluid class="pa-8 bg-gradient">
+        <!-- Header Section -->
+        <v-row justify="center" class="mb-12">
+          <v-col cols="12">
+            <div class="text-center">
+              <div class="hero-icon mb-4">
+                <v-avatar size="80" class="elevation-8">
+                  <v-icon size="40" color="white">mdi-shield-account</v-icon>
+                </v-avatar>
+              </div>
+              <h1 class="display-1 font-weight-light text-primary mb-2">
+                User Management Dashboard
+              </h1>
+              <p class="text-h6 text-medium-emphasis font-weight-light">
+                Secure authentication and user control center
+              </p>
+            </div>
+          </v-col>
+        </v-row>
 
-        <div></div>
-        <div class="text-body-2 text-medium-emphasis">${amount.toLocaleString()} $</div>
-      </div>
+        <v-row justify="center" align="start" class="g-8">
+          <!-- Login & Control Card -->
+          <v-col cols="12" lg="5" md="6">
+            <v-card
+              class="mx-auto user-control-card glass-effect"
+              elevation="0"
+              rounded="xl"
+            >
+              <div class="card-header">
+                <v-card-item class="pb-2">
+                  <div class="d-flex align-center mb-3">
+                    <v-avatar size="48" class="mr-4 elevation-4" color="primary">
+                      <v-icon color="white" size="24">mdi-account-cog</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-overline text-primary font-weight-bold">
+                        Control Panel
+                      </div>
+                      <div class="text-h5 font-weight-bold text-primary">
+                        User Authentication
+                      </div>
+                    </div>
+                  </div>
+                </v-card-item>
+              </div>
+
+              <v-card-text class="px-8 pb-8">
+                <v-form ref="loginForm" v-model="formValid" lazy-validation>
+                  <!-- Username Input -->
+                  <div class="input-group mb-6">
+                    <v-text-field
+                      v-model="userForm.username"
+                      label="Username"
+                      prepend-inner-icon="mdi-account-circle"
+                      variant="solo-filled"
+                      :rules="usernameRules"
+                      required
+                      color="primary"
+                      class="elegant-input"
+                      rounded="lg"
+                      hide-details="auto"
+                    ></v-text-field>
+                  </div>
+
+                  <!-- Role Selection -->
+                  <div class="input-group mb-6">
+                    <v-select
+                      v-model="userForm.role"
+                      :items="roleOptions"
+                      label="User Role"
+                      prepend-inner-icon="mdi-shield-crown"
+                      variant="solo-filled"
+                      color="primary"
+                      class="elegant-input"
+                      rounded="lg"
+                      hide-details
+                    ></v-select>
+                  </div>
+
+                  <!-- Date Time Picker -->
+                  <div class="input-group mb-6">
+                    <v-text-field
+                      v-model="userForm.scheduledDate"
+                      label="Scheduled Date & Time"
+                      prepend-inner-icon="mdi-calendar-clock"
+                      variant="solo-filled"
+                      type="datetime-local"
+                      color="primary"
+                      class="elegant-input"
+                      rounded="lg"
+                      hide-details
+                    ></v-text-field>
+                  </div>
+
+                  <!-- Active Status Switch -->
+                  <v-card class="status-card mb-8" rounded="xl" elevation="0">
+                    <v-card-text class="pa-6">
+                      <v-row align="center" no-gutters>
+                        <v-col>
+                          <div class="d-flex align-center">
+                            <v-avatar 
+                              size="40" 
+                              :color="userForm.isActive ? 'success' : 'error'"
+                              class="mr-4 elevation-2"
+                            >
+                              <v-icon color="white" size="20">
+                                {{ userForm.isActive ? 'mdi-account-check' : 'mdi-account-off' }}
+                              </v-icon>
+                            </v-avatar>
+                            <div>
+                              <div class="text-subtitle-1 font-weight-bold">
+                                Account Status
+                              </div>
+                              <div 
+                                class="text-h6 font-weight-bold"
+                                :class="userForm.isActive ? 'text-success' : 'text-error'"
+                              >
+                                {{ userForm.isActive ? 'Active' : 'Inactive' }}
+                              </div>
+                            </div>
+                          </div>
+                        </v-col>
+                        <v-col cols="auto">
+                          <v-switch
+                            v-model="userForm.isActive"
+                            color="success"
+                            hide-details
+                            inset
+                            size="large"
+                          ></v-switch>
+                        </v-col>
+                      </v-row>
+                    </v-card-text>
+                  </v-card>
+                </v-form>
+              </v-card-text>
+
+              <!-- Action Buttons -->
+              <v-card-actions class="pa-8 pt-0">
+                <v-row class="g-4">
+                  <v-col cols="12" sm="4">
+                    <v-btn
+                      @click="loginUser"
+                      color="primary"
+                      variant="elevated"
+                      block
+                      size="x-large"
+                      :loading="loading.login"
+                      prepend-icon="mdi-login"
+                      class="elegant-btn"
+                      rounded="xl"
+                    >
+                      Login
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-btn
+                      @click="saveUser"
+                      color="success"
+                      variant="elevated"
+                      block
+                      size="x-large"
+                      :loading="loading.save"
+                      prepend-icon="mdi-content-save"
+                      class="elegant-btn"
+                      rounded="xl"
+                    >
+                      Save
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12" sm="4">
+                    <v-btn
+                      @click="resetForm"
+                      color="warning"
+                      variant="elevated"
+                      block
+                      size="x-large"
+                      prepend-icon="mdi-refresh"
+                      class="elegant-btn"
+                      rounded="xl"
+                    >
+                      Reset
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card-actions>
+            </v-card>
+          </v-col>
+
+          <!-- User Information Display Card -->
+          <v-col cols="12" lg="7" md="6">
+            <v-card
+              class="mx-auto user-info-card glass-effect"
+              elevation="0"
+              rounded="xl"
+            >
+              <div class="card-header">
+                <v-card-item class="pb-2">
+                  <div class="d-flex align-center justify-space-between mb-3">
+                    <div class="d-flex align-center">
+                      <v-avatar size="56" class="mr-4 elevation-6" color="gradient-avatar">
+                        <v-icon color="white" size="28">mdi-account</v-icon>
+                      </v-avatar>
+                      <div>
+                        <div class="text-overline text-primary font-weight-bold">
+                          Account Information
+                        </div>
+                        <div class="text-h5 font-weight-bold text-primary">
+                          {{ currentUser.firstName && currentUser.lastName ? `${currentUser.firstName} ${currentUser.lastName}` : 'No User Selected' }}
+                        </div>
+                      </div>
+                    </div>
+                    <v-chip
+                      :color="currentUser.isActive ? 'success' : 'error'"
+                      variant="elevated"
+                      size="large"
+                      class="status-chip"
+                    >
+                      <v-icon start size="18">
+                        {{ currentUser.isActive ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                      </v-icon>
+                      {{ currentUser.isActive ? 'Active' : 'Inactive' }}
+                    </v-chip>
+                  </div>
+                </v-card-item>
+              </div>
+
+              <v-card-text class="px-8 pb-8">
+                <!-- Personal Information Section -->
+                <div class="info-section mb-8">
+                  <div class="section-header mb-6">
+                    <v-icon class="mr-3" color="primary" size="24">mdi-account-details</v-icon>
+                    <span class="text-h6 font-weight-bold text-primary">Personal Information</span>
+                  </div>
+                  <v-card class="info-card" rounded="xl" elevation="0">
+                    <v-card-text class="pa-6">
+                      <v-row class="g-4">
+                        <v-col cols="12" sm="6">
+                          <div class="info-field">
+                            <div class="field-label">First Name</div>
+                            <div class="field-value">{{ currentUser.firstName || 'Not specified' }}</div>
+                          </div>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                          <div class="info-field">
+                            <div class="field-label">Last Name</div>
+                            <div class="field-value">{{ currentUser.lastName || 'Not specified' }}</div>
+                          </div>
+                        </v-col>
+                        <v-col cols="12">
+                          <div class="info-field">
+                            <div class="field-label">Email Address</div>
+                            <div class="field-value">{{ currentUser.email || 'Not specified' }}</div>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-card-text>
+                  </v-card>
+                </div>
+
+                <!-- Authentication Information Section -->
+                <div class="info-section mb-8">
+                  <div class="section-header mb-6">
+                    <v-icon class="mr-3" color="success" size="24">mdi-shield-check</v-icon>
+                    <span class="text-h6 font-weight-bold text-primary">Authentication Details</span>
+                  </div>
+                  <v-card class="info-card" rounded="xl" elevation="0">
+                    <v-card-text class="pa-6">
+                      <v-row class="g-4">
+                        <v-col cols="12" sm="6">
+                          <div class="auth-item">
+                            <v-avatar size="40" color="primary" class="mr-4">
+                              <v-icon color="white" size="20">mdi-calendar-plus</v-icon>
+                            </v-avatar>
+                            <div>
+                              <div class="auth-label">First Authentication</div>
+                              <div class="auth-value">{{ currentUser.firstAuthDate }}</div>
+                            </div>
+                          </div>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                          <div class="auth-item">
+                            <v-avatar size="40" color="warning" class="mr-4">
+                              <v-icon color="white" size="20">mdi-key-change</v-icon>
+                            </v-avatar>
+                            <div>
+                              <div class="auth-label">Password Changed</div>
+                              <div class="auth-value">{{ currentUser.passwordChangeDate }}</div>
+                            </div>
+                          </div>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                          <div class="auth-item">
+                            <v-avatar size="40" :color="currentUser.cguAccepted ? 'success' : 'error'" class="mr-4">
+                              <v-icon color="white" size="20">
+                                {{ currentUser.cguAccepted ? 'mdi-check' : 'mdi-close' }}
+                              </v-icon>
+                            </v-avatar>
+                            <div>
+                              <div class="auth-label">Terms & Conditions</div>
+                              <div class="auth-value">
+                                {{ currentUser.cguAccepted ? 'Accepted' : 'Not Accepted' }}
+                              </div>
+                            </div>
+                          </div>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                          <div class="auth-item">
+                            <v-avatar size="40" color="info" class="mr-4">
+                              <v-icon color="white" size="20">mdi-clock-outline</v-icon>
+                            </v-avatar>
+                            <div>
+                              <div class="auth-label">Last Authentication</div>
+                              <div class="auth-value">{{ currentUser.lastAuth }}</div>
+                            </div>
+                          </div>
+                        </v-col>
+                      </v-row>
+                    </v-card-text>
+                  </v-card>
+                </div>
+
+                <!-- Statistics Section -->
+                <div class="info-section mb-8">
+                  <div class="section-header mb-6">
+                    <v-icon class="mr-3" color="info" size="24">mdi-chart-line</v-icon>
+                    <span class="text-h6 font-weight-bold text-primary">Authentication Statistics</span>
+                  </div>
+                  <v-row class="g-4">
+                    <v-col cols="12" sm="6">
+                      <v-card class="stat-card success-gradient" rounded="xl" elevation="0">
+                        <v-card-text class="pa-6 text-center">
+                          <v-avatar size="60" color="rgba(255,255,255,0.2)" class="mb-4">
+                            <v-icon size="30" color="white">mdi-login-variant</v-icon>
+                          </v-avatar>
+                          <div class="text-h3 font-weight-bold text-white mb-2">
+                            {{ currentUser.stats.totalAuth }}
+                          </div>
+                          <div class="text-subtitle-1 text-white font-weight-medium">
+                            Total Authentications
+                          </div>
+                        </v-card-text>
+                      </v-card>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <v-card class="stat-card error-gradient" rounded="xl" elevation="0">
+                        <v-card-text class="pa-6 text-center">
+                          <v-avatar size="60" color="rgba(255,255,255,0.2)" class="mb-4">
+                            <v-icon size="30" color="white">mdi-alert-circle</v-icon>
+                          </v-avatar>
+                          <div class="text-h3 font-weight-bold text-white mb-2">
+                            {{ currentUser.stats.authErrors }}
+                          </div>
+                          <div class="text-subtitle-1 text-white font-weight-medium">
+                            Authentication Errors
+                          </div>
+                        </v-card-text>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </div>
+
+                <!-- Security Status -->
+                <div class="info-section">
+                  <div class="section-header mb-6">
+                    <v-icon class="mr-3" color="warning" size="24">mdi-security</v-icon>
+                    <span class="text-h6 font-weight-bold text-primary">Security Status</span>
+                  </div>
+                  <v-row class="g-4">
+                    <v-col cols="12" sm="6">
+                      <v-alert
+                        :color="currentUser.stats.authErrors > 5 ? 'error' : 'success'"
+                        variant="elevated"
+                        :icon="currentUser.stats.authErrors > 5 ? 'mdi-shield-alert' : 'mdi-shield-check'"
+                        rounded="xl"
+                        class="security-alert"
+                      >
+                        <div class="text-subtitle-1 font-weight-bold">Account Security</div>
+                        <div class="text-body-2 mt-1">
+                          {{ currentUser.stats.authErrors > 5 ? 'Multiple failed attempts detected' : 'Account secure and protected' }}
+                        </div>
+                      </v-alert>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <v-alert
+                        :color="currentUser.cguAccepted ? 'success' : 'warning'"
+                        variant="elevated"
+                        :icon="currentUser.cguAccepted ? 'mdi-check-circle' : 'mdi-alert'"
+                        rounded="xl"
+                        class="security-alert"
+                      >
+                        <div class="text-subtitle-1 font-weight-bold">Compliance Status</div>
+                        <div class="text-body-2 mt-1">
+                          {{ currentUser.cguAccepted ? 'All terms accepted' : 'Action required' }}
+                        </div>
+                      </v-alert>
+                    </v-col>
+                  </v-row>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+
+      <!-- Success Snackbar -->
+      <v-snackbar
+        v-model="snackbar.show"
+        :color="snackbar.color"
+        :timeout="4000"
+        location="top"
+        variant="elevated"
+        rounded="pill"
+        class="elegant-snackbar"
+      >
+        <div class="d-flex align-center">
+          <v-icon class="mr-3" size="24">{{ snackbar.icon }}</v-icon>
+          <span class="text-subtitle-1 font-weight-medium">{{ snackbar.message }}</span>
+        </div>
+        <template #actions>
+          <v-btn variant="text" @click="snackbar.show = false" color="white">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </template>
+      </v-snackbar>
+    </v-main>
+  </v-app>
+</template>
+
+<script setup>
+import { ref, reactive, computed } from 'vue'
+
+// Form validation
+const formValid = ref(false)
+const loginForm = ref(null)
+
+// Loading states
+const loading = reactive({
+  login: false,
+  save: false
+})
+
+// Snackbar for notifications
+const snackbar = reactive({
+  show: false,
+  message: '',
+  color: 'success',
+  icon: 'mdi-check-circle'
+})
+
+// Form data
+const userForm = reactive({
+  username: '',
+  role: 'User',
+  scheduledDate: '',
+  isActive: true
+})
+
+// Role options
+const roleOptions = [
+  'Administrator',
+  'Manager',
+  'User',
+  'Guest',
+  'Developer',
+  'Analyst'
+]
+
+// Validation rules
+const usernameRules = [
+  v => !!v || 'Username is required',
+  v => v.length >= 3 || 'Username must be at least 3 characters'
+]
+
+// Current user data (mock data for display)
+const currentUser = reactive({
+  username: '',
+  firstName: 'John',
+  lastName: 'Doe',
+  email: 'john.doe@example.com',
+  role: 'Administrator',
+  isActive: true,
+  firstAuthDate: '15/01/2023 14:30',
+  passwordChangeDate: '12/11/2024 09:15',
+  cguAccepted: true,
+  lastAuth: '18/12/2024 16:45',
+  stats: {
+    totalAuth: 1247,
+    authErrors: 3
+  },
+})
+
+// Methods
+const loginUser = async () => {
+  if (!formValid.value) {
+    await loginForm.value.validate()
+    return
+  }
+
+  loading.login = true
+  
+  // Simulate API call
+  setTimeout(() => {
+    loading.login = false
+    
+    // Update current user with form data
+    currentUser.username = userForm.username
+    currentUser.firstName = userForm.username.charAt(0).toUpperCase() + userForm.username.slice(1)
+    currentUser.role = userForm.role
+    currentUser.isActive = userForm.isActive
+    currentUser.lastAuth = new Date().toLocaleString('fr-FR')
+    
+    showSnackbar('Login successful! Welcome back.', 'success', 'mdi-check-circle')
+  }, 1500)
+}
+
+const saveUser = async () => {
+  if (!formValid.value) {
+    await loginForm.value.validate()
+    return
+  }
+
+  loading.save = true
+  
+  // Simulate API call
+  setTimeout(() => {
+    loading.save = false
+    
+    // Update current user with form data
+    currentUser.username = userForm.username
+    currentUser.firstName = userForm.username.charAt(0).toUpperCase() + userForm.username.slice(1)
+    currentUser.role = userForm.role
+    currentUser.isActive = userForm.isActive
+    
+    showSnackbar('User data saved successfully!', 'success', 'mdi-content-save')
+  }, 1000)
+}
+
+const resetForm = () => {
+  userForm.username = ''
+  userForm.role = 'User'
+  userForm.scheduledDate = ''
+  userForm.isActive = true
+  
+  if (loginForm.value) {
+    loginForm.value.resetValidation()
+  }
+  
+  showSnackbar('Form reset successfully!', 'info', 'mdi-refresh')
+}
+
+const showSnackbar = (message, color = 'success', icon = 'mdi-check-circle') => {
+  snackbar.message = message
+  snackbar.color = color
+  snackbar.icon = icon
+  snackbar.show = true
+}
+</script>
+
+<style scoped>
+/* Background Gradient */
+.bg-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* Hero Section */
+.hero-icon .v-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 4px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Glass Effect Cards */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Headers */
+.card-header {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 24px 24px 0 0;
+}
+
+/* Elegant Inputs */
+.elegant-input :deep(.v-field) {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.elegant-input :deep(.v-field:hover) {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.elegant-input :deep(.v-field--focused) {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 12px 40px rgba(102, 126, 234, 0.2);
+}
+
+/* Status Card */
+.status-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+/* Elegant Buttons */
+.elegant-btn {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.elegant-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+}
+
+/* Info Cards */
+.info-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%);
+  border: 1px solid rgba(102, 126, 234, 0.1);
+  transition: all 0.3s ease;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+/* Info Fields */
+.info-field {
+  padding: 12px 0;
+}
+
+.field-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.field-value {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+/* Auth Items */
+.auth-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.auth-item:last-child {
+  border-bottom: none;
+}
+
+.auth-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  margin-bottom: 2px;
+}
+
+.auth-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.87);
+}
+
+/* Statistics Cards */
+.stat-card {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.success-gradient {
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+}
+
+.error-gradient {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.gradient-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Status Chip */
+.status-chip {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Security Alerts */
+.security-alert {
+  transition: all 0.3s ease;
+}
+
+.security-alert:hover {
+  transform: translateY(-2px);
+}
+
+/* Elegant Snackbar */
+.elegant-snackbar :deep(.v-snackbar__wrapper) {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+/* Responsive Design */
+@media (max-width: 960px) {
+  .bg-gradient {
+    padding: 16px;
+  }
+  
+  .hero-icon {
+    margin-bottom: 24px;
+  }
+  
+  .display-1 {
+    font-size: 2rem !important;
+  }
+}
+
+/* Animation Classes */
+.v-card {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.v-avatar {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.v-btn {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Hover Effects */
+.user-control-card:hover,
+.user-info-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+}
+</style>
