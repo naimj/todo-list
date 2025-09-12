@@ -1,1 +1,645 @@
-/^(?:(?:31\/(?:01|03|05|07|08|10|12)|(?:30|29)\/(?:01|03|04|05|06|07|08|09|10|11|12)|(?:0[1-9]|1\d|2[0-8])\/(?:0[1-9]|1[0-2]))\/\d{4}|29\/02\/(?:(?:[02468][048]00|[13579][26]00)|(?:\d{2}(?:0[48]|[2468][048]|[13579][26])))) (?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d$/
+<template>
+  <v-app>
+    <v-app-bar 
+      color="primary" 
+      dark 
+      elevation="2"
+      app
+    >
+      <v-app-bar-title>
+        <v-icon class="mr-2">mdi-file-document-multiple</v-icon>
+        Document Management System
+      </v-app-bar-title>
+      
+      <v-spacer></v-spacer>
+      
+      <v-btn 
+        icon="mdi-plus" 
+        @click="showAddDialog = true"
+        variant="text"
+      ></v-btn>
+    </v-app-bar>
+
+    <v-main class="bg-background">
+      <v-container fluid class="pa-6">
+        <!-- Header Section -->
+        <div class="d-flex justify-space-between align-center mb-6">
+          <div>
+            <h1 class="text-h4 font-weight-bold text-grey-darken-3 mb-2">Documents</h1>
+            <p class="text-body-1 text-grey-darken-1">Manage your document collection</p>
+          </div>
+          
+          <div class="d-flex gap-4">
+            <v-chip
+              color="success"
+              variant="elevated"
+              size="large"
+            >
+              <v-icon start>mdi-check-circle</v-icon>
+              {{ activeDocumentsCount }} Active
+            </v-chip>
+            
+            <v-chip
+              color="primary"
+              variant="elevated"
+              size="large"
+            >
+              <v-icon start>mdi-file-document</v-icon>
+              {{ documents.length }} Total
+            </v-chip>
+          </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <v-card class="mb-6" elevation="2">
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="searchQuery"
+                  prepend-inner-icon="mdi-magnify"
+                  label="Search documents..."
+                  variant="outlined"
+                  density="compact"
+                  hide-details
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12" md="2">
+                <v-select
+                  v-model="filterType"
+                  :items="documentTypes"
+                  label="Filter by type"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  hide-details
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="2">
+                <v-select
+                  v-model="filterRole"
+                  :items="allRoles"
+                  label="Filter by role"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  hide-details
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="2">
+                <v-select
+                  v-model="filterStatus"
+                  :items="statusOptions"
+                  label="Filter by status"
+                  variant="outlined"
+                  density="compact"
+                  clearable
+                  hide-details
+                ></v-select>
+              </v-col>
+              <v-col cols="12" md="2">
+                <v-btn
+                  @click="clearFilters"
+                  variant="outlined"
+                  color="grey"
+                  block
+                  prepend-icon="mdi-filter-remove"
+                >
+                  Clear
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+
+        <!-- Documents Expansion Panels -->
+        <v-expansion-panels
+          v-if="filteredDocuments.length > 0"
+          variant="accordion"
+          class="document-panels"
+        >
+          <v-expansion-panel
+            v-for="document in filteredDocuments"
+            :key="document.id"
+            class="document-panel mb-4"
+            elevation="3"
+          >
+            <!-- Panel Header -->
+            <v-expansion-panel-title class="pa-4">
+              <div class="d-flex align-center justify-space-between w-100 mr-4">
+                <div class="d-flex align-center flex-grow-1">
+                  <!-- Status Indicator -->
+                  <v-avatar
+                    :color="document.isActive ? 'success' : 'error'"
+                    size="12"
+                    class="mr-3"
+                  >
+                  </v-avatar>
+                  
+                  <!-- Document Info -->
+                  <div class="flex-grow-1">
+                    <div class="d-flex align-center mb-1">
+                      <h3 class="text-h6 font-weight-bold text-grey-darken-3 mr-3">
+                        {{ document.title }}
+                      </h3>
+                      
+                      <v-chip
+                        :color="getTypeColor(document.type)"
+                        variant="tonal"
+                        size="small"
+                        class="mr-2"
+                      >
+                        <v-icon start size="small">{{ getTypeIcon(document.type) }}</v-icon>
+                        {{ document.type }}
+                      </v-chip>
+                      
+                      <v-chip
+                        :color="document.isActive ? 'success' : 'error'"
+                        variant="tonal"
+                        size="small"
+                      >
+                        <v-icon start size="small">
+                          {{ document.isActive ? 'mdi-check-circle' : 'mdi-pause-circle' }}
+                        </v-icon>
+                        {{ document.isActive ? 'Active' : 'Inactive' }}
+                      </v-chip>
+                    </div>
+                    
+                    <p class="text-body-2 text-grey-darken-1 mb-0">
+                      {{ document.description }}
+                    </p>
+                  </div>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="d-flex align-center gap-4 text-caption text-grey-darken-1">
+                  <div class="d-flex align-center">
+                    <v-icon size="small" class="mr-1">mdi-account-group</v-icon>
+                    {{ document.roles.length }} roles
+                  </div>
+                  <div class="d-flex align-center">
+                    <v-icon size="small" class="mr-1">mdi-earth</v-icon>
+                    {{ document.countries.length }} countries
+                  </div>
+                </div>
+              </div>
+            </v-expansion-panel-title>
+
+            <!-- Panel Content -->
+            <v-expansion-panel-text class="pa-4 pt-0">
+              <v-divider class="mb-4"></v-divider>
+              
+              <v-row>
+                <!-- Left Column: Roles and Countries -->
+                <v-col cols="12" lg="8">
+                  <!-- Roles Section -->
+                  <div class="mb-6">
+                    <h4 class="text-subtitle-1 font-weight-medium text-grey-darken-2 mb-3">
+                      <v-icon size="small" class="mr-2">mdi-account-group</v-icon>
+                      Assigned Roles ({{ document.roles.length }})
+                    </h4>
+                    <div class="d-flex flex-wrap gap-2">
+                      <v-chip
+                        v-for="role in document.roles"
+                        :key="role"
+                        color="secondary"
+                        variant="tonal"
+                        size="default"
+                        prepend-icon="mdi-account"
+                      >
+                        {{ role }}
+                      </v-chip>
+                    </div>
+                  </div>
+
+                  <!-- Countries Section -->
+                  <div class="mb-4">
+                    <div class="d-flex align-center justify-space-between mb-3">
+                      <h4 class="text-subtitle-1 font-weight-medium text-grey-darken-2">
+                        <v-icon size="small" class="mr-2">mdi-earth</v-icon>
+                        Available Countries ({{ document.countries.length }})
+                      </h4>
+                      <v-btn
+                        v-if="document.countries.length > 8"
+                        @click="showCountriesDialog(document)"
+                        variant="text"
+                        size="small"
+                        color="primary"
+                        prepend-icon="mdi-eye"
+                      >
+                        View All Countries
+                      </v-btn>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-2">
+                      <v-chip
+                        v-for="(country, index) in document.countries.slice(0, 8)"
+                        :key="country"
+                        color="info"
+                        variant="tonal"
+                        size="small"
+                        prepend-icon="mdi-flag"
+                      >
+                        {{ country }}
+                      </v-chip>
+                      
+                      <v-chip
+                        v-if="document.countries.length > 8"
+                        color="grey"
+                        variant="outlined"
+                        size="small"
+                        @click="showCountriesDialog(document)"
+                        class="cursor-pointer"
+                        prepend-icon="mdi-dots-horizontal"
+                      >
+                        +{{ document.countries.length - 8 }} more
+                      </v-chip>
+                    </div>
+                  </div>
+                </v-col>
+
+                <!-- Right Column: Actions and Status -->
+                <v-col cols="12" lg="4">
+                  <div class="d-flex flex-column gap-4">
+                    <!-- Status Toggle -->
+                    <v-card variant="tonal" :color="document.isActive ? 'success' : 'error'" class="pa-4">
+                      <div class="d-flex align-center justify-space-between">
+                        <div>
+                          <h5 class="text-subtitle-2 font-weight-medium mb-1">Document Status</h5>
+                          <p class="text-caption mb-0">
+                            {{ document.isActive ? 'Currently active and available' : 'Currently inactive' }}
+                          </p>
+                        </div>
+                        <v-switch
+                          v-model="document.isActive"
+                          @change="toggleDocumentStatus(document)"
+                          color="white"
+                          hide-details
+                        ></v-switch>
+                      </div>
+                    </v-card>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-column gap-2">
+                      <v-btn
+                        @click="editDocument(document)"
+                        color="primary"
+                        variant="elevated"
+                        block
+                        prepend-icon="mdi-pencil"
+                        size="large"
+                      >
+                        Edit Document
+                      </v-btn>
+                      
+                      <v-btn
+                        @click="downloadDocument(document)"
+                        color="success"
+                        variant="elevated"
+                        block
+                        prepend-icon="mdi-download"
+                        size="large"
+                      >
+                        Download
+                      </v-btn>
+                      
+                      <v-btn
+                        @click="deleteDocument(document)"
+                        color="error"
+                        variant="outlined"
+                        block
+                        prepend-icon="mdi-delete"
+                        size="large"
+                      >
+                        Delete Document
+                      </v-btn>
+                    </div>
+                  </div>
+                </v-col>
+              </v-row>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
+        <!-- Empty State -->
+        <v-card
+          v-if="filteredDocuments.length === 0"
+          class="text-center pa-12"
+          elevation="2"
+        >
+          <v-icon size="80" color="grey-lighten-1" class="mb-4">
+            mdi-file-document-outline
+          </v-icon>
+          <h3 class="text-h5 font-weight-medium text-grey-darken-1 mb-2">
+            No documents found
+          </h3>
+          <p class="text-body-1 text-grey mb-6">
+            Try adjusting your search criteria or add a new document.
+          </p>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            size="large"
+            @click="showAddDialog = true"
+            prepend-icon="mdi-plus"
+          >
+            Add New Document
+          </v-btn>
+        </v-card>
+      </v-container>
+
+      <!-- Countries Dialog -->
+      <v-dialog v-model="countriesDialog" max-width="800">
+        <v-card>
+          <v-card-title class="d-flex align-center justify-space-between">
+            <span class="text-h5">All Countries</span>
+            <v-btn icon="mdi-close" variant="text" @click="countriesDialog = false"></v-btn>
+          </v-card-title>
+          
+          <v-card-text>
+            <v-text-field
+              v-model="countrySearch"
+              prepend-inner-icon="mdi-magnify"
+              label="Search countries..."
+              variant="outlined"
+              density="compact"
+              class="mb-4"
+            ></v-text-field>
+            
+            <div class="d-flex flex-wrap gap-2" style="max-height: 400px; overflow-y: auto;">
+              <v-chip
+                v-for="country in filteredCountriesForDialog"
+                :key="country"
+                color="info"
+                variant="tonal"
+                size="default"
+                prepend-icon="mdi-flag"
+              >
+                {{ country }}
+              </v-chip>
+            </div>
+            
+            <v-divider class="my-4"></v-divider>
+            <p class="text-caption text-grey text-center">
+              Showing {{ filteredCountriesForDialog.length }} of {{ selectedDocumentCountries.length }} countries
+            </p>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+
+      <!-- Snackbar for Actions -->
+      <v-snackbar
+        v-model="snackbar.show"
+        :color="snackbar.color"
+        :timeout="3000"
+        location="top right"
+      >
+        {{ snackbar.message }}
+        <template v-slot:actions>
+          <v-btn variant="text" @click="snackbar.show = false">
+            Close
+          </v-btn>
+        </template>
+      </v-snackbar>
+    </v-main>
+  </v-app>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      searchQuery: '',
+      filterType: null,
+      filterRole: null,
+      filterStatus: null,
+      countriesDialog: false,
+      countrySearch: '',
+      selectedDocumentCountries: [],
+      showAddDialog: false,
+      snackbar: {
+        show: false,
+        message: '',
+        color: 'success'
+      },
+      statusOptions: [
+        { title: 'Active', value: true },
+        { title: 'Inactive', value: false }
+      ],
+      documents: [
+        {
+          id: 1,
+          title: 'Global Market Research Report',
+          type: 'Report',
+          description: 'Comprehensive analysis of global market trends and opportunities across multiple sectors and regions.',
+          isActive: true,
+          roles: ['Manager', 'Analyst', 'Director', 'Consultant', 'Executive'],
+          countries: ['United States', 'United Kingdom', 'Germany', 'France', 'Japan', 'China', 'India', 'Brazil', 'Canada', 'Australia', 'Netherlands', 'Switzerland', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Belgium', 'Austria', 'Italy', 'Spain', 'Portugal', 'Ireland', 'South Korea', 'Singapore', 'Hong Kong', 'Taiwan', 'Thailand', 'Malaysia', 'Indonesia', 'Philippines', 'Vietnam', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru', 'South Africa', 'Nigeria', 'Kenya', 'Egypt', 'Morocco', 'Israel', 'UAE', 'Saudi Arabia', 'Turkey', 'Russia', 'Poland', 'Czech Republic', 'Hungary', 'Romania', 'Bulgaria', 'Croatia', 'Greece', 'Cyprus', 'Malta', 'Luxembourg', 'Iceland', 'Estonia', 'Latvia', 'Lithuania', 'Slovakia', 'Slovenia', 'New Zealand', 'Fiji', 'Papua New Guinea', 'Bangladesh', 'Pakistan', 'Sri Lanka', 'Nepal', 'Myanmar', 'Cambodia', 'Laos', 'Mongolia', 'Kazakhstan', 'Uzbekistan', 'Kyrgyzstan', 'Tajikistan', 'Turkmenistan', 'Afghanistan', 'Iran', 'Iraq', 'Jordan', 'Lebanon', 'Syria', 'Yemen', 'Oman', 'Qatar', 'Bahrain', 'Kuwait', 'Libya', 'Algeria', 'Tunisia', 'Sudan', 'Ethiopia', 'Ghana', 'Ivory Coast', 'Senegal', 'Mali', 'Burkina Faso', 'Niger', 'Chad', 'Cameroon', 'Central African Republic', 'Democratic Republic of Congo', 'Republic of Congo', 'Gabon', 'Equatorial Guinea']
+        },
+        {
+          id: 2,
+          title: 'Software Development Guidelines',
+          type: 'Documentation',
+          description: 'Best practices and coding standards for enterprise software development projects.',
+          isActive: true,
+          roles: ['Developer', 'Tech Lead', 'Architect', 'QA Engineer'],
+          countries: ['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Netherlands', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Switzerland', 'Austria', 'India', 'China', 'Japan', 'South Korea', 'Singapore', 'Australia', 'New Zealand']
+        },
+        {
+          id: 3,
+          title: 'Financial Compliance Manual',
+          type: 'Manual',
+          description: 'Detailed compliance procedures and regulatory requirements for financial operations.',
+          isActive: false,
+          roles: ['Compliance Officer', 'Financial Analyst', 'Legal Counsel'],
+          countries: ['United States', 'United Kingdom', 'Germany', 'France', 'Switzerland', 'Luxembourg', 'Netherlands', 'Ireland', 'Japan', 'Singapore', 'Hong Kong', 'Canada', 'Australia']
+        },
+        {
+          id: 4,
+          title: 'Employee Training Presentation',
+          type: 'Presentation',
+          description: 'Comprehensive training materials for new employee onboarding and skill development.',
+          isActive: true,
+          roles: ['HR Manager', 'Trainer', 'Department Head', 'Team Lead', 'Supervisor'],
+          countries: ['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Switzerland', 'Austria', 'Australia', 'New Zealand', 'Japan', 'South Korea', 'Singapore', 'India', 'Brazil', 'Mexico', 'Argentina', 'Chile', 'South Africa']
+        },
+        {
+          id: 5,
+          title: 'Technical Specification Document',
+          type: 'Specification',
+          description: 'Detailed technical specifications for the new product development initiative.',
+          isActive: false,
+          roles: ['Technical Writer', 'Engineer', 'Product Manager'],
+          countries: ['United States', 'Germany', 'Japan', 'South Korea', 'China', 'India', 'United Kingdom', 'France', 'Netherlands', 'Sweden', 'Finland', 'Denmark', 'Switzerland', 'Canada', 'Australia', 'Singapore', 'Taiwan', 'Israel']
+        },
+        {
+          id: 6,
+          title: 'Marketing Campaign Strategy',
+          type: 'Strategy',
+          description: 'Strategic marketing plan for Q4 product launch across multiple regions and channels.',
+          isActive: true,
+          roles: ['Marketing Manager', 'Brand Manager', 'Digital Marketer', 'Content Creator'],
+          countries: ['United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Belgium', 'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Australia', 'New Zealand', 'Japan', 'South Korea', 'China', 'India', 'Singapore', 'Hong Kong', 'Taiwan', 'Thailand', 'Malaysia', 'Indonesia', 'Philippines', 'Vietnam', 'Brazil', 'Mexico', 'Argentina', 'Chile', 'Colombia', 'Peru', 'South Africa', 'Nigeria', 'Kenya', 'UAE', 'Saudi Arabia', 'Turkey', 'Russia', 'Poland', 'Czech Republic', 'Hungary']
+        }
+      ],
+      documentTypes: ['Report', 'Documentation', 'Manual', 'Presentation', 'Specification', 'Strategy'],
+      allRoles: ['Manager', 'Analyst', 'Director', 'Consultant', 'Executive', 'Developer', 'Tech Lead', 'Architect', 'QA Engineer', 'Compliance Officer', 'Financial Analyst', 'Legal Counsel', 'HR Manager', 'Trainer', 'Department Head', 'Team Lead', 'Supervisor', 'Technical Writer', 'Engineer', 'Product Manager', 'Marketing Manager', 'Brand Manager', 'Digital Marketer', 'Content Creator']
+    }
+  },
+
+  computed: {
+    filteredDocuments() {
+      let filtered = this.documents
+
+      if (this.searchQuery) {
+        filtered = filtered.filter(doc => 
+          doc.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          doc.description.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          doc.roles.some(role => role.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+          doc.countries.some(country => country.toLowerCase().includes(this.searchQuery.toLowerCase()))
+        )
+      }
+
+      if (this.filterType) {
+        filtered = filtered.filter(doc => doc.type === this.filterType)
+      }
+
+      if (this.filterRole) {
+        filtered = filtered.filter(doc => doc.roles.includes(this.filterRole))
+      }
+
+      if (this.filterStatus !== null) {
+        filtered = filtered.filter(doc => doc.isActive === this.filterStatus)
+      }
+
+      return filtered
+    },
+
+    filteredCountriesForDialog() {
+      if (!this.countrySearch) return this.selectedDocumentCountries
+      
+      return this.selectedDocumentCountries.filter(country =>
+        country.toLowerCase().includes(this.countrySearch.toLowerCase())
+      )
+    },
+
+    activeDocumentsCount() {
+      return this.documents.filter(doc => doc.isActive).length
+    }
+  },
+
+  methods: {
+    getTypeColor(type) {
+      const colors = {
+        'Report': 'primary',
+        'Documentation': 'info',
+        'Manual': 'warning',
+        'Presentation': 'success',
+        'Specification': 'purple',
+        'Strategy': 'orange'
+      }
+      return colors[type] || 'grey'
+    },
+
+    getTypeIcon(type) {
+      const icons = {
+        'Report': 'mdi-file-chart',
+        'Documentation': 'mdi-file-document',
+        'Manual': 'mdi-book-open',
+        'Presentation': 'mdi-presentation',
+        'Specification': 'mdi-file-cog',
+        'Strategy': 'mdi-strategy'
+      }
+      return icons[type] || 'mdi-file'
+    },
+
+    showCountriesDialog(document) {
+      this.selectedDocumentCountries = document.countries
+      this.countrySearch = ''
+      this.countriesDialog = true
+    },
+
+    toggleDocumentStatus(document) {
+      const status = document.isActive ? 'activated' : 'deactivated'
+      this.showSnackbar(`Document "${document.title}" has been ${status}`, document.isActive ? 'success' : 'warning')
+    },
+
+    editDocument(document) {
+      this.showSnackbar(`Opening editor for "${document.title}"`, 'info')
+      // Add edit logic here
+    },
+
+    downloadDocument(document) {
+      this.showSnackbar(`Downloading "${document.title}"`, 'success')
+      // Add download logic here
+    },
+
+    deleteDocument(document) {
+      if (confirm(`Are you sure you want to delete "${document.title}"?`)) {
+        this.showSnackbar(`Deleted "${document.title}"`, 'error')
+        const index = this.documents.findIndex(d => d.id === document.id)
+        if (index > -1) {
+          this.documents.splice(index, 1)
+        }
+      }
+    },
+
+    clearFilters() {
+      this.searchQuery = ''
+      this.filterType = null
+      this.filterRole = null
+      this.filterStatus = null
+      this.showSnackbar('All filters cleared', 'info')
+    },
+
+    showSnackbar(message, color = 'success') {
+      this.snackbar.message = message
+      this.snackbar.color = color
+      this.snackbar.show = true
+    }
+  }
+}
+</script>
+
+<style scoped>
+.document-panels .v-expansion-panel {
+  border-radius: 12px !important;
+  margin-bottom: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.document-panels .v-expansion-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.document-panels .v-expansion-panel-title {
+  border-radius: 12px 12px 0 0;
+}
+
+.document-panels .v-expansion-panel--active .v-expansion-panel-title {
+  border-radius: 12px 12px 0 0;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.gap-2 > * {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.gap-4 > * {
+  margin-right: 16px;
+}
+
+.v-expansion-panel-text {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.v-expansion-panel-title--active {
+  background-color: rgba(var(--v-theme-primary), 0.05);
+}
+</style>
