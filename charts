@@ -1,290 +1,32 @@
-<template>
-  <v-app>
-    <div class="domain-selection-container">
-      <!-- Background Elements -->
-      <div class="background-elements">
-        <div class="bg-shape shape-1"></div>
-        <div class="bg-shape shape-2"></div>
-        <div class="bg-shape shape-3"></div>
-      </div>
-
-      <!-- Main Content -->
-      <v-main class="d-flex align-center justify-center ">
-        <v-container fluid class="pa-4">
-          <v-row justify="center" align="center" ">
-            <v-col cols="12" sm="10" md="8" lg="6" xl="4">
-              <div class="text-center mb-8">
-                <v-fade-transition>
-                  <v-card
-                    elevation="12"
-                    rounded="xl"
-                    max-width="480"
-                    width="100%"
-                  >
-                    <v-card-text class="pa-8">
-                      <!-- Header Section -->
-                      <div class="text-center mb-8">
-                        <v-avatar
-                          size="80"
-                          class="mb-4 elevation-4"
-                          color="primary"
-                        >
-                          <v-icon size="48" color="white">mdi-domain</v-icon>
-                        </v-avatar>
-                        <h1 class="text-h4 font-weight-bold text-primary mb-2">
-                          Sélection du Domaine
-                        </h1>
-                        <p class="text-body-1 text-medium-emphasis">
-                          Choisissez le domaine sur lequel vous souhaitez vous connecter
-                        </p>
-                      </div>
-
-                      <!-- Domain Selection Form -->
-                      <v-form
-                        ref="form"
-                        v-model="valid"
-                        @submit.prevent="handleDomainSelection"
-                      >
-                        <v-select
-                          v-model="selectedDomain"
-                          :items="availableDomains"
-                          :rules="domainRules"
-                          label="Domaine"
-                          variant="outlined"
-                          color="primary"
-                          prepend-inner-icon="mdi-web"
-                          class="mb-4"
-                          required
-                          :loading="loading"
-                          :disabled="loading"
-                          item-title="label"
-                          item-value="value"
-                        >
-                          <template v-slot:item="{ props, item }">
-                            <v-list-item v-bind="props">
-                              <template v-slot:prepend>
-                                <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
-                              </template>
-                              <v-list-item-title>{{ item.raw.label }}</v-list-item-title>
-                              <v-list-item-subtitle>{{ item.raw.description }}</v-list-item-subtitle>
-                            </v-list-item>
-                          </template>
-                        </v-select>
-
-                        <v-text-field
-                          v-if="selectedDomain === 'custom'"
-                          v-model="customDomain"
-                          :rules="customDomainRules"
-                          label="Domaine personnalisé"
-                          variant="outlined"
-                          color="primary"
-                          prepend-inner-icon="mdi-pencil"
-                          placeholder="exemple.com"
-                          class="mb-4"
-                          required
-                          :loading="loading"
-                          :disabled="loading"
-                        />
-
-                        <v-btn
-                          type="submit"
-                          color="primary"
-                          size="large"
-                          variant="flat"
-                          block
-                          rounded="lg"
-                          :loading="loading"
-                          :disabled="!valid || loading"
-                          class="mb-4"
-                        >
-                          <template v-slot:prepend>
-                            <v-icon>mdi-arrow-right</v-icon>
-                          </template>
-                          Continuer vers la connexion
-                        </v-btn>
-
-                        <!-- Additional Info -->
-                        <v-divider class="my-4" />
-
-                        <div class="text-center">
-                          <p class="text-body-2 text-medium-emphasis mb-2">
-                            Besoin d'aide pour choisir votre domaine ?
-                          </p>
-                          <v-btn
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            prepend-icon="mdi-help-circle-outline"
-                            :disabled="loading"
-                          >
-                            Guide des domaines
-                          </v-btn>
-                        </div>
-                      </v-form>
-                    </v-card-text>
-
-                    <!-- Alert Messages -->
-                    <v-alert
-                      v-if="errorMessage"
-                      type="error"
-                      variant="tonal"
-                      class="ma-4 mt-0"
-                      closable
-                      @click:close="errorMessage = ''"
-                    >
-                      {{ errorMessage }}
-                    </v-alert>
-                  </v-card>
-                </v-fade-transition>
-              </div>
-            </v-col>
-          </v-row>
-        </v-container>
-      </v-main>
-
-    </div>
-  </v-app>
-</template>
-
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useTheme } from 'vuetify'
-
-const emit = defineEmits<{
-  domainSelected: [domain: string]
-}>()
-
-const theme = useTheme()
-const isDark = computed(() => theme.global.name.value === 'dark')
-
-// Form data
-const selectedDomain = ref('')
-const customDomain = ref('')
-const valid = ref(false)
-const loading = ref(false)
-const errorMessage = ref('')
-
-// Available domains
-const availableDomains = [
-  {
-    label: 'Demo',
-    value: 'demo',
-    description: 'Environnement de démonstration',
-    icon: 'mdi-play-circle',
-    color: 'success'
-  },
-  {
-    label: 'Production',
-    value: 'production',
-    description: 'Environnement de production',
-    icon: 'mdi-server',
-    color: 'primary'
-  },
-  {
-    label: 'Développement',
-    value: 'development',
-    description: 'Environnement de développement',
-    icon: 'mdi-code-tags',
-    color: 'warning'
-  },
-  {
-    label: 'Test',
-    value: 'test',
-    description: 'Environnement de test',
-    icon: 'mdi-test-tube',
-    color: 'info'
-  },
-  {
-    label: 'Domaine personnalisé',
-    value: 'custom',
-    description: 'Saisissez votre propre domaine',
-    icon: 'mdi-pencil',
-    color: 'secondary'
-  }
-]
-
-// Validation rules
-const domainRules = [
-  (v: string) => !!v || 'La sélection d\'un domaine est requise',
-]
-
-const customDomainRules = [
-  (v: string) => {
-    if (selectedDomain.value !== 'custom') return true
-    return !!v || 'Le domaine personnalisé est requis'
-  },
-  (v: string) => {
-    if (selectedDomain.value !== 'custom') return true
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/
-    return domainRegex.test(v) || 'Format de domaine invalide'
-  }
-]
-
-const toggleTheme = () => {
-  theme.global.name.value = isDark.value ? 'light' : 'dark'
-}
-
-const handleDomainSelection = async () => {
-  if (!valid.value) return
-
-  loading.value = true
-  errorMessage.value = ''
-
-  try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    const finalDomain = selectedDomain.value === 'custom' ? customDomain.value : selectedDomain.value
-    emit('domainSelected', finalDomain)
-  } catch (error) {
-    errorMessage.value = 'Erreur lors de la validation du domaine. Veuillez réessayer.'
-  } finally {
-    loading.value = false
-  }
-}
-</script>
-
-<style scoped>
-.domain-selection-container {
-  position: relative;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #00566F 0%, #EC6608 100%);
-  overflow: hidden;
-}
-
-.background-elements {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* formes fixes translucides sans animation */
-.bg-shape {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-}
-
-.shape-1 {
-  width: 200px;
-  height: 200px;
-  top: 10%;
-  left: 10%;
-}
-
-.shape-2 {
-  width: 150px;
-  height: 150px;
-  top: 60%;
-  right: 15%;
-}
-
-.shape-3 {
-  width: 100px;
-  height: 100px;
-  bottom: 20%;
-  left: 20%;
-}
-</style>
+    <v-card
+      v-if="selectedDomain"
+      class="domain-info-card mb-6"
+      elevation="0"
+      rounded="xl"
+      variant="tonal"
+      color="primary"
+    >
+      <v-card-text class="pa-4 bg-white">
+        <div class="d-flex align-center justify-space-between">
+          <div class="d-flex align-center">
+            <v-avatar size="40" color="primary" class="me-3">
+              <v-icon color="white" size="20">mdi-domain</v-icon>
+            </v-avatar>
+            <div>
+              <p class="text-caption text-medium-emphasis mb-1">Domaine sélectionné</p>
+              <p class="text-h6 font-weight-bold text-primary mb-0">{{ selectedDomain }}</p>
+            </div>
+          </div>
+          <v-btn
+            variant="outlined"
+            color="primary"
+            size="small"
+            prepend-icon="mdi-swap-horizontal"
+            @click="$emit('changeDomain')"
+            class="change-domain-btn"
+          >
+            Changer
+          </v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
