@@ -1,32 +1,12 @@
-    <v-card
-      v-if="selectedDomain"
-      class="domain-info-card mb-6"
-      elevation="0"
-      rounded="xl"
-      variant="tonal"
-      color="primary"
-    >
-      <v-card-text class="pa-4 bg-white">
-        <div class="d-flex align-center justify-space-between">
-          <div class="d-flex align-center">
-            <v-avatar size="40" color="primary" class="me-3">
-              <v-icon color="white" size="20">mdi-domain</v-icon>
-            </v-avatar>
-            <div>
-              <p class="text-caption text-medium-emphasis mb-1">Domaine sélectionné</p>
-              <p class="text-h6 font-weight-bold text-primary mb-0">{{ selectedDomain }}</p>
-            </div>
-          </div>
-          <v-btn
-            variant="outlined"
-            color="primary"
-            size="small"
-            prepend-icon="mdi-swap-horizontal"
-            @click="$emit('changeDomain')"
-            class="change-domain-btn"
-          >
-            Changer
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(10deg);
+  }
+}
+
+animation: float 6s ease-in-out infinite;
+
+  animation-delay: 0s;
