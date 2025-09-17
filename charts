@@ -1,12 +1,77 @@
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-20px) rotate(10deg);
+<template>
+  <v-treeview
+    v-model:selected="selected"
+    :items="items"
+    item-value="id"
+    item-text="name"
+    open-all
+  >
+    <template #prepend="{ item }">
+      <!-- Parent coche active -->
+      <v-checkbox
+        v-if="isParent(item)"
+        :model-value="selected.includes(item.id)"
+        @update:model-value="toggleParent(item)"
+        density="compact"
+      />
+      <!-- Enfant grisé si parent sélectionné -->
+      <v-checkbox
+        v-else
+        :disabled="isChildDisabled(item)"
+        :model-value="false"
+        density="compact"
+      />
+    </template>
+  </v-treeview>
+
+  <div class="mt-4">
+    v-model:selected: {{ selected }}
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const items = [
+  {
+    id: 1,
+    name: 'Parent A',
+    children: [
+      { id: 2, name: 'Fils A1' },
+      { id: 3, name: 'Fils A2' },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Parent B',
+    children: [
+      { id: 5, name: 'Fils B1' },
+    ],
+  },
+]
+
+const selected = ref([])
+
+const isParent = item => !!item.children?.length
+
+const toggleParent = item => {
+  if (selected.value.includes(item.id)) {
+    selected.value = selected.value.filter(v => v !== item.id)
+  } else {
+    selected.value = [item.id] // ou push si multi possible
   }
 }
 
-animation: float 6s ease-in-out infinite;
+const isChildDisabled = item => {
+  // enfant désactivé si son parent est sélectionné
+  return selected.value.includes(item.parentId || findParentId(item.id))
+}
 
-  animation-delay: 0s;
+// petite fonction pour retrouver le parentId (si pas stocké dans data)
+const findParentId = id => {
+  for (const parent of items) {
+    if (parent.children?.some(c => c.id === id)) return parent.id
+  }
+  return null
+}
+</script>
