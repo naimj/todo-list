@@ -1,1 +1,129 @@
+<template>
+  <v-list class="tree-list" nav>
+    <template v-for="parent in items" :key="parent.id">
+      <v-list-group :value="parent.id" no-action>
+        <template #activator="{ props }">
+          <v-list-item v-bind="props" class="parent-item">
+            <v-icon class="me-2" color="primary" size="small">
+              {{ selectedParents.includes(parent.id) ? 'mdi-folder' : 'mdi-folder-outline' }}
+            </v-icon>
 
+            <v-checkbox
+              :model-value="selectedParents.includes(parent.id)"
+              @update:model-value="toggleParent(parent)"
+              density="compact"
+              hide-details
+              color="primary"
+              class="me-2"
+            />
+
+            <v-list-item-title class="font-weight-bold">
+              {{ parent.name }}
+            </v-list-item-title>
+          </v-list-item>
+        </template>
+
+        <v-list-item
+          v-for="child in parent.children"
+          :key="child.id"
+          class="child-item"
+        >
+          <v-icon class="me-2" color="grey" size="small">mdi-file</v-icon>
+
+          <v-checkbox
+            :model-value="selectedChildren.includes(child.id)"
+            @update:model-value="toggleChild(child)"
+            :disabled="selectedParents.includes(parent.id)"
+            density="compact"
+            hide-details
+            color="grey"
+            class="me-2"
+          />
+
+          <v-list-item-title :class="{ 'text-disabled': selectedParents.includes(parent.id) }">
+            {{ child.name }}
+          </v-list-item-title>
+        </v-list-item>
+      </v-list-group>
+    </template>
+  </v-list>
+
+  <div class="mt-4 px-4">
+    <v-divider class="mb-2" />
+    <strong>📁 Parents sélectionnés :</strong> {{ selectedParents }}<br>
+    <strong>📄 Enfants sélectionnés :</strong> {{ selectedChildren }}
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const items = [
+  {
+    id: 1,
+    name: 'Dossier A',
+    children: [
+      { id: 2, name: 'Fichier A1' },
+      { id: 3, name: 'Fichier A2' },
+    ],
+  },
+  {
+    id: 4,
+    name: 'Dossier B',
+    children: [
+      { id: 5, name: 'Fichier B1' },
+    ],
+  },
+]
+
+const selectedParents = ref([])
+const selectedChildren = ref([])
+
+const toggleParent = parent => {
+  if (selectedParents.value.includes(parent.id)) {
+    selectedParents.value = selectedParents.value.filter(id => id !== parent.id)
+  } else {
+    selectedParents.value.push(parent.id)
+    parent.children.forEach(child => {
+      selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
+    })
+  }
+}
+
+const toggleChild = child => {
+  if (selectedChildren.value.includes(child.id)) {
+    selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
+  } else {
+    selectedChildren.value.push(child.id)
+  }
+}
+</script>
+
+<style scoped>
+.tree-list {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.parent-item {
+  background-color: #e3f2fd;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.parent-item:hover {
+  background-color: #bbdefb;
+}
+
+.child-item {
+  padding-left: 32px;
+  transition: opacity 0.3s ease;
+}
+
+.text-disabled {
+  opacity: 0.5;
+}
+</style>
