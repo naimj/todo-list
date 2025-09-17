@@ -5,11 +5,11 @@
         <template #activator="{ props }">
           <v-list-item v-bind="props">
             <v-icon class="me-2" color="primary">
-              {{ selected.includes(parent.id) ? 'mdi-folder' : 'mdi-folder-outline' }}
+              {{ selectedParents.includes(parent.id) ? 'mdi-folder' : 'mdi-folder-outline' }}
             </v-icon>
 
             <v-checkbox
-              :model-value="selected.includes(parent.id)"
+              :model-value="selectedParents.includes(parent.id)"
               @update:model-value="toggleParent(parent)"
               density="compact"
               hide-details
@@ -22,10 +22,18 @@
         <v-list-item
           v-for="child in parent.children"
           :key="child.id"
-          :disabled="selected.includes(parent.id)"
         >
           <v-icon class="me-2" color="grey">mdi-file-outline</v-icon>
-          <v-list-item-title :class="{ 'text-disabled': selected.includes(parent.id) }">
+
+          <v-checkbox
+            :model-value="selectedChildren.includes(child.id)"
+            @update:model-value="toggleChild(child)"
+            :disabled="selectedParents.includes(parent.id)"
+            density="compact"
+            hide-details
+            color="grey"
+          />
+          <v-list-item-title :class="{ 'text-disabled': selectedParents.includes(parent.id) }">
             {{ child.name }}
           </v-list-item-title>
         </v-list-item>
@@ -34,7 +42,8 @@
   </v-list>
 
   <div class="mt-4">
-    <strong>v-model:selected :</strong> {{ selected }}
+    <strong>Parents sélectionnés :</strong> {{ selectedParents }}<br>
+    <strong>Enfants sélectionnés :</strong> {{ selectedChildren }}
   </div>
 </template>
 
@@ -59,13 +68,26 @@ const items = [
   },
 ]
 
-const selected = ref([])
+const selectedParents = ref([])
+const selectedChildren = ref([])
 
 const toggleParent = parent => {
-  if (selected.value.includes(parent.id)) {
-    selected.value = selected.value.filter(v => v !== parent.id)
+  if (selectedParents.value.includes(parent.id)) {
+    selectedParents.value = selectedParents.value.filter(id => id !== parent.id)
   } else {
-    selected.value.push(parent.id)
+    selectedParents.value.push(parent.id)
+    // Optionnel : désélectionner les enfants du parent
+    parent.children.forEach(child => {
+      selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
+    })
+  }
+}
+
+const toggleChild = child => {
+  if (selectedChildren.value.includes(child.id)) {
+    selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
+  } else {
+    selectedChildren.value.push(child.id)
   }
 }
 </script>
