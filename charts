@@ -1,31 +1,40 @@
 <template>
-  <v-treeview
-    v-model:selected="selected"
-    :items="items"
-    item-value="id"
-    item-text="name"
-    open-all
-  >
-    <template #prepend="{ item }">
-      <!-- Parent coche active -->
-      <v-checkbox
-        v-if="isParent(item)"
-        :model-value="selected.includes(item.id)"
-        @update:model-value="toggleParent(item)"
-        density="compact"
-      />
-      <!-- Enfant grisé si parent sélectionné -->
-      <v-checkbox
-        v-else
-        :disabled="isChildDisabled(item)"
-        :model-value="false"
-        density="compact"
-      />
+  <v-list density="comfortable" nav>
+    <template v-for="parent in items" :key="parent.id">
+      <v-list-group :value="parent.id" no-action>
+        <template #activator="{ props }">
+          <v-list-item v-bind="props">
+            <v-icon class="me-2" color="primary">
+              {{ selected.includes(parent.id) ? 'mdi-folder' : 'mdi-folder-outline' }}
+            </v-icon>
+
+            <v-checkbox
+              :model-value="selected.includes(parent.id)"
+              @update:model-value="toggleParent(parent)"
+              density="compact"
+              hide-details
+              color="primary"
+            />
+            <v-list-item-title>{{ parent.name }}</v-list-item-title>
+          </v-list-item>
+        </template>
+
+        <v-list-item
+          v-for="child in parent.children"
+          :key="child.id"
+          :disabled="selected.includes(parent.id)"
+        >
+          <v-icon class="me-2" color="grey">mdi-file-outline</v-icon>
+          <v-list-item-title :class="{ 'text-disabled': selected.includes(parent.id) }">
+            {{ child.name }}
+          </v-list-item-title>
+        </v-list-item>
+      </v-list-group>
     </template>
-  </v-treeview>
+  </v-list>
 
   <div class="mt-4">
-    v-model:selected: {{ selected }}
+    <strong>v-model:selected :</strong> {{ selected }}
   </div>
 </template>
 
@@ -35,43 +44,28 @@ import { ref } from 'vue'
 const items = [
   {
     id: 1,
-    name: 'Parent A',
+    name: 'Dossier A',
     children: [
-      { id: 2, name: 'Fils A1' },
-      { id: 3, name: 'Fils A2' },
+      { id: 2, name: 'Fichier A1' },
+      { id: 3, name: 'Fichier A2' },
     ],
   },
   {
     id: 4,
-    name: 'Parent B',
+    name: 'Dossier B',
     children: [
-      { id: 5, name: 'Fils B1' },
+      { id: 5, name: 'Fichier B1' },
     ],
   },
 ]
 
 const selected = ref([])
 
-const isParent = item => !!item.children?.length
-
-const toggleParent = item => {
-  if (selected.value.includes(item.id)) {
-    selected.value = selected.value.filter(v => v !== item.id)
+const toggleParent = parent => {
+  if (selected.value.includes(parent.id)) {
+    selected.value = selected.value.filter(v => v !== parent.id)
   } else {
-    selected.value = [item.id] // ou push si multi possible
+    selected.value.push(parent.id)
   }
-}
-
-const isChildDisabled = item => {
-  // enfant désactivé si son parent est sélectionné
-  return selected.value.includes(item.parentId || findParentId(item.id))
-}
-
-// petite fonction pour retrouver le parentId (si pas stocké dans data)
-const findParentId = id => {
-  for (const parent of items) {
-    if (parent.children?.some(c => c.id === id)) return parent.id
-  }
-  return null
 }
 </script>
