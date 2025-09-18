@@ -1,129 +1,410 @@
 <template>
-  <v-list class="tree-list" nav>
-    <template v-for="parent in items" :key="parent.id">
-      <v-list-group :value="parent.id" no-action>
-        <template #activator="{ props }">
-          <v-list-item v-bind="props" class="parent-item">
-            <v-icon class="me-2" color="primary" size="small">
-              {{ selectedParents.includes(parent.id) ? 'mdi-folder' : 'mdi-folder-outline' }}
-            </v-icon>
-
-            <v-checkbox
-              :model-value="selectedParents.includes(parent.id)"
-              @update:model-value="toggleParent(parent)"
-              density="compact"
-              hide-details
-              color="primary"
-              class="me-2"
-            />
-
-            <v-list-item-title class="font-weight-bold">
-              {{ parent.name }}
-            </v-list-item-title>
-          </v-list-item>
-        </template>
-
-        <v-list-item
-          v-for="child in parent.children"
-          :key="child.id"
-          class="child-item"
-        >
-          <v-icon class="me-2" color="grey" size="small">mdi-file</v-icon>
-
-          <v-checkbox
-            :model-value="selectedChildren.includes(child.id)"
-            @update:model-value="toggleChild(child)"
-            :disabled="selectedParents.includes(parent.id)"
-            density="compact"
-            hide-details
-            color="grey"
-            class="me-2"
-          />
-
-          <v-list-item-title :class="{ 'text-disabled': selectedParents.includes(parent.id) }">
-            {{ child.name }}
-          </v-list-item-title>
-        </v-list-item>
-      </v-list-group>
-    </template>
-  </v-list>
-
-  <div class="mt-4 px-4">
-    <v-divider class="mb-2" />
-    <strong>📁 Parents sélectionnés :</strong> {{ selectedParents }}<br>
-    <strong>📄 Enfants sélectionnés :</strong> {{ selectedChildren }}
+  <div class="text-body-2">
+    <TreeViewNode
+      v-for="node in items"
+      :key="node.id"
+      :node="node"
+      :level="0"
+      :selected="selectedIds"
+      :expanded="expandedIds"
+      :selectable="selectable && showSelection"
+      :multiple="multiple"
+      @toggle="handleToggle"
+      @select="handleSelect"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue';
+import TreeViewNode from './TreeViewNode.vue';
 
-const items = [
-  {
-    id: 1,
-    name: 'Dossier A',
-    children: [
-      { id: 2, name: 'Fichier A1' },
-      { id: 3, name: 'Fichier A2' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Dossier B',
-    children: [
-      { id: 5, name: 'Fichier B1' },
-    ],
-  },
-]
+const props = defineProps({
+  items: { type: Array, required: true },
+  selectable: { type: Boolean, default: false },
+  multiple: { type: Boolean, default: false },
+  showSelection: { type: Boolean, default: true },
+  modelValue: { type: [Array, String, Number], default: null },
+});
 
-const selectedParents = ref([])
-const selectedChildren = ref([])
+const emit = defineEmits(['update:modelValue', 'update:expanded']);
 
-const toggleParent = parent => {
-  if (selectedParents.value.includes(parent.id)) {
-    selectedParents.value = selectedParents.value.filter(id => id !== parent.id)
+// état
+const expandedIds = ref(new Set());
+
+const selectedIds = computed(() => {
+  if (!props.modelValue) return new Set();
+  return new Set(
+    Array.isArray(props.modelValue) ? props.modelValue : [props.modelValue]
+  );
+});
+
+// toggle ouverture
+const handleToggle = (id) => {
+  expandedIds.value.has(id)
+    ? expandedIds.value.delete(id)
+    : expandedIds.value.add(id);
+  emit('update:expanded', [...expandedIds.value]);
+};
+
+// sélection
+const handleSelect = (id) => {
+  if (!props.selectable) return;
+
+  if (props.multiple) {
+    const newSelected = new Set(selectedIds.value);
+    newSelected.has(id) ? newSelected.delete(id) : newSelected.add(id);
+    emit('update:modelValue', [...newSelected]);
   } else {
-    selectedParents.value.push(parent.id)
-    parent.children.forEach(child => {
-      selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
-    })
+    emit('update:modelValue', selectedIds.value.has(id) ? null : id);
   }
-}
+};
 
-const toggleChild = child => {
-  if (selectedChildren.value.includes(child.id)) {
-    selectedChildren.value = selectedChildren.value.filter(id => id !== child.id)
-  } else {
-    selectedChildren.value.push(child.id)
+// expose
+const expandAll = () => {
+  const collect = (items) =>
+    items.flatMap((i) => [i.id, ...(i.children ? collect(i.children) : [])]);
+  expandedIds.value = new Set(collect(props.items));
+  emit('update:expanded', [...expandedIds.value]);
+};
+
+const collapseAll = () => {
+  expandedIds.value.clear();
+  emit('update:expanded', []);
+};
+
+defineExpose({ expandAll, collapseAll });
+</script>
+------------------------------------------------------------------------------------------------------------
+<template>
+  <div>
+    <!-- Node -->
+    <div
+      class="d-flex align-center rounded px-2"
+      :class="[
+        isSelected ? 'bg-blue-lighten-5 text-primary font-weight-medium' : '',
+        node.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+      ]"
+      @click="handleNodeClick"
+    >
+      <!-- Chevron -->
+      <v-icon
+        v-if="hasChildren"
+        size="18"
+        class="me-1"
+        @click.stop="handleToggle"
+      >
+        {{ isExpanded ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
+      </v-icon>
+      <span v-else class="me-1" style="width: 18px"></span>
+
+      <!-- Checkbox -->
+      <v-checkbox
+        v-if="selectable && !node.disabled"
+        density="compact"
+        hide-details
+        :model-value="isSelected"
+        :disabled="parentSelected"
+        @click.stop="handleSelect"
+        @update:model-value="handleSelect"
+        class="me-2"
+      />
+
+      <!-- Icon -->
+      <v-icon
+        v-if="node.icon || hasChildren"
+        size="18"
+        class="me-2"
+        :color="node.icon === 'folder' || hasChildren ? 'warning' : 'info'"
+      >
+        {{ node.icon === 'folder' || hasChildren ? 'mdi-folder' : 'mdi-file' }}
+      </v-icon>
+
+      <!-- Label -->
+      <span class="flex-grow-1 text-truncate">{{ node.name }}</span>
+    </div>
+
+    <!-- Children -->
+    <v-expand-transition>
+      <div v-if="hasChildren && isExpanded" class="tree-children">
+        <div
+          v-for="(child, index) in node.children"
+          :key="child.id"
+          class="tree-node-wrapper"
+          :class="{ 'is-last': index === node.children.length - 1 }"
+        >
+          <TreeViewNode
+            :node="child"
+            :level="level + 1"
+            :selected="selected"
+            :expanded="expanded"
+            :selectable="selectable"
+            :parent-selected="isSelected || parentSelected"
+            @toggle="$emit('toggle', $event)"
+            @select="$emit('select', $event)"
+            @deselect-children="$emit('deselect-children', $event)"
+          />
+        </div>
+      </div>
+    </v-expand-transition>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue';
+
+defineOptions({ name: 'TreeViewNode' });
+
+const props = defineProps({
+  node: { type: Object, required: true },
+  level: { type: Number, required: true },
+  selected: { type: Object, required: true }, // Set
+  expanded: { type: Object, required: true }, // Set
+  selectable: { type: Boolean, default: false },
+  parentSelected: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(['toggle', 'select', 'deselect-children']);
+
+const hasChildren = computed(() => props.node.children?.length > 0);
+const isExpanded = computed(() => props.expanded.has(props.node.id));
+const isSelected = computed(() => props.selected.has(props.node.id));
+
+const handleToggle = () => hasChildren.value && emit('toggle', props.node.id);
+
+const handleSelect = () => {
+  if (props.selectable && !props.node.disabled && !props.parentSelected) {
+    emit('select', props.node.id);
+    if (hasChildren.value) emit('deselect-children', props.node); // 🔑 empêche enfants sélectionnés
   }
-}
+};
+
+const handleNodeClick = () => {
+  if (hasChildren.value && !props.selectable) handleToggle();
+};
 </script>
 
 <style scoped>
-.tree-list {
-  background-color: #f9f9f9;
+.tree-node-wrapper {
+  position: relative;
+  padding-inline-start: 2rem;
+}
+.tree-node-wrapper::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 12px;
+  width: 1px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+.tree-node-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 21px;
+  inset-inline-start: 12px;
+  width: 22px;
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+.tree-node-wrapper.is-last::before {
+  bottom: 18px;
+}
+</style>
+----------------------------------------------------------
+<template>
+  <div class="app">
+    <h1>Custom TreeView Component</h1>
+
+    <div class="demo-section">
+      <h2>Multiple Selection TreeView</h2>
+      <div class="controls">
+        <label class="checkbox-label">
+          <input type="checkbox" v-model="showSelectionMultiple" />
+          Show Selection
+        </label>
+        <button @click="expandAllMultiple">Expand All</button>
+        <button @click="collapseAllMultiple">Collapse All</button>
+        <button @click="clearSelection">Clear Selection</button>
+        <span class="selected-info">
+          Selected: {{ selectedMultiple.length }} items
+        </span>
+      </div>
+      <div class="tree-container">
+        <TreeView
+          :items="multipleTreeData"
+          v-model="selectedMultiple"
+          :selectable="true"
+          :multiple="true"
+          :show-selection="showSelectionMultiple"
+          ref="multipleTreeRef"
+        />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import TreeView from './components/TreeView.vue';
+
+const basicTreeRef = ref(null);
+const selectableTreeRef = ref(null);
+const multipleTreeRef = ref(null);
+const fileSystemRef = ref(null);
+
+const selectedSingle = ref(null);
+const selectedMultiple = ref([]);
+const selectedFile = ref(null);
+const showSelectionSingle = ref(true);
+const showSelectionMultiple = ref(true);
+const showSelectionFile = ref(true);
+
+// Multiple selection tree data
+const multipleTreeData = [
+  {
+    id: 'cat1',
+    name: 'Electronics',
+    children: [
+      { id: 'prod1', name: 'Laptop' },
+      { id: 'prod2', name: 'Smartphone' },
+      {
+        id: 'subcat1',
+        name: 'Audio',
+        children: [
+          { id: 'prod3', name: 'Headphones' },
+          { id: 'prod4', name: 'Speakers' },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'cat2',
+    name: 'Books',
+    children: [
+      { id: 'prod5', name: 'Fiction' },
+      { id: 'prod6', name: 'Non-Fiction' },
+      {
+        id: 'subcat2',
+        name: 'Technical',
+        children: [
+          { id: 'prod7', name: 'Programming' },
+          { id: 'prod8', name: 'Design' },
+        ],
+      },
+    ],
+  },
+];
+
+// Control methods
+const expandAllBasic = () => basicTreeRef.value?.expandAll();
+const collapseAllBasic = () => basicTreeRef.value?.collapseAll();
+const expandAllMultiple = () => multipleTreeRef.value?.expandAll();
+const collapseAllMultiple = () => multipleTreeRef.value?.collapseAll();
+const clearSelection = () => {
+  selectedMultiple.value = [];
+};
+</script>
+<style>
+body {
+  margin: 0;
+  background-color: #fafafa;
+}
+
+.app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  background-color: white;
+  min-height: 100vh;
+}
+
+h1 {
+  color: #1565c0;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+}
+
+h2 {
+  color: #424242;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.demo-section {
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  border: 1px solid #e8eaed;
   border-radius: 8px;
-  padding: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.parent-item {
-  background-color: #e3f2fd;
+.tree-container {
+  background-color: #ffffff;
+  border: 1px solid #e8eaed;
   border-radius: 6px;
-  margin-bottom: 4px;
-  transition: background-color 0.3s ease;
+  padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.parent-item:hover {
-  background-color: #bbdefb;
+.controls {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.child-item {
-  padding-left: 32px;
-  transition: opacity 0.3s ease;
+.controls button {
+  padding: 0.5rem 1rem;
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-.text-disabled {
-  opacity: 0.5;
+.controls button:hover {
+  background-color: #0d47a1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: #424242;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.checkbox-label:hover {
+  background-color: #f5f5f5;
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.selected-info {
+  font-weight: 500;
+  color: #616161;
+  margin-left: auto;
+  background-color: #f5f5f5;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
 }
 </style>
