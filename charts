@@ -17,3 +17,10 @@ const handleSelect = (id) => {
     emit('update:modelValue', selectedIds.value.has(id) ? null : id)
   }
 }
+----------------
+const findNodeById = (items, id) =>
+  items.reduce((found, item) => {
+    if (found) return found
+    if (item.id === id) return item
+    return item.children ? findNodeById(item.children, id) : null
+  }, null)
