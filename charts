@@ -24,3 +24,17 @@ const findNodeById = (items, id) =>
     if (item.id === id) return item
     return item.children ? findNodeById(item.children, id) : null
   }, null)
+
+
+const addInfoToThirdLevel = (items, info) => {
+  const walk = (nodes, depth = 1) => {
+    nodes.forEach(node => {
+      if (depth === 3) {
+        // 👇 ajoute la propriété que tu veux
+        node.extraInfo = info
+      }
+      if (node.children) walk(node.children, depth + 1)
+    })
+  }
+  walk(items)
+}
