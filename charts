@@ -24,25 +24,39 @@ const searchResult = (query) => {
   return result
 }
 
-const onSearchQuery = useDebounceFn(() => {
+const onSearchQuery = useDebounceFn(async () => {
   const q = searchTrad.value.trim()
 
-  // 1. applique la recherche
+  // 1. filtrage
   filteredData.value = searchResult(q)
 
-  // 2. ouvre tous les domaines et codes trouvés
+  // 2. ouverture
   if (q) {
-    const domainKeys = Object.keys(filteredData.value)
-    openedDomains.value = domainKeys
-
-    const codesToOpen = {}
-    domainKeys.forEach((domain) => {
-      codesToOpen[domain] = Object.keys(filteredData.value[domain])
-    })
-    openedCodes.value = codesToOpen
+    await openAllWithLoader()   // <<--- ici on appelle ta fonction
   } else {
-    // champ vide → tout fermer
     openedDomains.value = []
     openedCodes.value = {}
   }
 }, 250)
+
+const openAllWithLoader = async () => {
+  loader.show()
+  await nextTick() // laisse le temps d'afficher le loader
+
+  const domainKeys = Object.keys(filteredData.value)
+  openedDomains.value = domainKeys
+  openedCodes.value = {}
+
+  let i = 0
+  function step() {
+    if (i >= domainKeys.length) {
+      loader.hide()
+      return
+    }
+    const domain = domainKeys[i]
+    openedCodes.value[domain] = Object.keys(filteredData.value[domain])
+    i++
+    setTimeout(step, 30) // ouvre domaine par domaine
+  }
+  step()
+}
