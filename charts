@@ -1,57 +1,50 @@
-const filterTrads = (items, searchValue, codeTrad) => {
-    return items.filter(({ TRADUCTION }) => {
-        if (TRADUCTION?.toLowerCase().includes(searchValue) || codeTrad.toLowerCase().includes(searchValue)) {
-            return true;
-        }
+const filterTrads = (items, q, codeLower) => {
+  // Pas de recréation de fonction inutile
+  return items.filter(({ TRADUCTION }) => {
+    const t = TRADUCTION?.toLowerCase() || ''
+    return t.includes(q) || codeLower.includes(q)
+  })
+}
 
-        return false;
-    });
-};
+const searchResult = (query) => {
+  const q = query.trim().toLowerCase()
+  if (!q) return groupedData.value
 
-const searchResult = async () => {
-    const searchValue = searchTrad.value.trim().toLowerCase();
-    const result = {};
+  const result = {}
 
-    if (!searchValue) {
-        filteredData.value = groupedData.value;
-
-        return;
+  for (const [domaine, codes] of Object.entries(groupedData.value)) {
+    for (const [codeTrad, items] of Object.entries(codes)) {
+      const filteredItems = filterTrads(items, q, codeTrad.toLowerCase())
+      if (filteredItems.length) {
+        result[domaine] ??= {}
+        result[domaine][codeTrad] = filteredItems
+      }
     }
+  }
 
-    for (const [domaine, codes] of Object.entries(groupedData.value)) {
-        for (const [codeTrad, items] of Object.entries(codes)) {
-            const filteredItems = filterTrads(items, searchValue, codeTrad);
-
-            if (filteredItems.length) {
-                result[domaine] ??= {};
-                result[domaine][codeTrad] = filteredItems;
-            }
-        }
-    }
-
-    filteredData.value = result;
-
-    return filteredData.value;
-};
+  return result
+}
 
 const onSearchQuery = useDebounceFn(() => {
-    filteredData.value = groupedData.value;
+  const q = searchTrad.value.trim()
 
-    searchResult();
+  // 1. filtrage
+  filteredData.value = searchResult(q)
 
-    const domainKeys = Object.keys(filteredData.value);
-    const codesToOpen = {};
+  if (q) {
+    // 👉 N'ouvre qu'un seul domaine et un seul code → DOM minimal
+    const firstDomain = Object.keys(filteredData.value)[0]
+    if (firstDomain) {
+      openedDomains.value = [firstDomain]
 
-    openedDomains.value = domainKeys;
-
-    domainKeys.forEach((domain) => {
-        codesToOpen[domain] = Object.keys(filteredData.value[domain]);
-    });
-
-    openedCodes.value = codesToOpen;
-
-    if (!searchTrad.value.trim()) {
-        openedDomains.value = [];
-        openedCodes.value = {};
+      const firstCode = Object.keys(filteredData.value[firstDomain])[0]
+      openedCodes.value = { [firstDomain]: firstCode ? [firstCode] : [] }
+    } else {
+      openedDomains.value = []
+      openedCodes.value = {}
     }
-}, 300);
+  } else {
+    openedDomains.value = []
+    openedCodes.value = {}
+  }
+}, 250) // petit debounce
