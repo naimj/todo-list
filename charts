@@ -1,5 +1,4 @@
 const filterTrads = (items, q, codeLower) => {
-  // Pas de recréation de fonction inutile
   return items.filter(({ TRADUCTION }) => {
     const t = TRADUCTION?.toLowerCase() || ''
     return t.includes(q) || codeLower.includes(q)
@@ -28,23 +27,22 @@ const searchResult = (query) => {
 const onSearchQuery = useDebounceFn(() => {
   const q = searchTrad.value.trim()
 
-  // 1. filtrage
+  // 1. applique la recherche
   filteredData.value = searchResult(q)
 
+  // 2. ouvre tous les domaines et codes trouvés
   if (q) {
-    // 👉 N'ouvre qu'un seul domaine et un seul code → DOM minimal
-    const firstDomain = Object.keys(filteredData.value)[0]
-    if (firstDomain) {
-      openedDomains.value = [firstDomain]
+    const domainKeys = Object.keys(filteredData.value)
+    openedDomains.value = domainKeys
 
-      const firstCode = Object.keys(filteredData.value[firstDomain])[0]
-      openedCodes.value = { [firstDomain]: firstCode ? [firstCode] : [] }
-    } else {
-      openedDomains.value = []
-      openedCodes.value = {}
-    }
+    const codesToOpen = {}
+    domainKeys.forEach((domain) => {
+      codesToOpen[domain] = Object.keys(filteredData.value[domain])
+    })
+    openedCodes.value = codesToOpen
   } else {
+    // champ vide → tout fermer
     openedDomains.value = []
     openedCodes.value = {}
   }
-}, 250) // petit debounce
+}, 250)
