@@ -1,40 +1,57 @@
-const handleSelect = (id) => {
-  if (!props.selectable) return
+const filterTrads = (items, searchValue, codeTrad) => {
+    return items.filter(({ TRADUCTION }) => {
+        if (TRADUCTION?.toLowerCase().includes(searchValue) || codeTrad.toLowerCase().includes(searchValue)) {
+            return true;
+        }
 
-  if (props.multiple) {
-    const newSelected = new Set(selectedIds.value)
-    const parent = findNodeById(props.items, id)
+        return false;
+    });
+};
 
-    if (newSelected.has(id)) {
-      newSelected.delete(id)
-    } else {
-      newSelected.add(id)
-      parent?.children && collectIds(parent.children).forEach(cid => newSelected.delete(cid))
+const searchResult = async () => {
+    const searchValue = searchTrad.value.trim().toLowerCase();
+    const result = {};
+
+    if (!searchValue) {
+        filteredData.value = groupedData.value;
+
+        return;
     }
 
-    emit('update:modelValue', [...newSelected])
-  } else {
-    emit('update:modelValue', selectedIds.value.has(id) ? null : id)
-  }
-}
-----------------
-const findNodeById = (items, id) =>
-  items.reduce((found, item) => {
-    if (found) return found
-    if (item.id === id) return item
-    return item.children ? findNodeById(item.children, id) : null
-  }, null)
+    for (const [domaine, codes] of Object.entries(groupedData.value)) {
+        for (const [codeTrad, items] of Object.entries(codes)) {
+            const filteredItems = filterTrads(items, searchValue, codeTrad);
 
+            if (filteredItems.length) {
+                result[domaine] ??= {};
+                result[domaine][codeTrad] = filteredItems;
+            }
+        }
+    }
 
-const addInfoToThirdLevel = (items, info) => {
-  const walk = (nodes, depth = 1) => {
-    nodes.forEach(node => {
-      if (depth === 3) {
-        // 👇 ajoute la propriété que tu veux
-        node.extraInfo = info
-      }
-      if (node.children) walk(node.children, depth + 1)
-    })
-  }
-  walk(items)
-}
+    filteredData.value = result;
+
+    return filteredData.value;
+};
+
+const onSearchQuery = useDebounceFn(() => {
+    filteredData.value = groupedData.value;
+
+    searchResult();
+
+    const domainKeys = Object.keys(filteredData.value);
+    const codesToOpen = {};
+
+    openedDomains.value = domainKeys;
+
+    domainKeys.forEach((domain) => {
+        codesToOpen[domain] = Object.keys(filteredData.value[domain]);
+    });
+
+    openedCodes.value = codesToOpen;
+
+    if (!searchTrad.value.trim()) {
+        openedDomains.value = [];
+        openedCodes.value = {};
+    }
+}, 300);
