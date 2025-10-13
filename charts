@@ -1,62 +1,612 @@
-const filterTrads = (items, q, codeLower) => {
-  return items.filter(({ TRADUCTION }) => {
-    const t = TRADUCTION?.toLowerCase() || ''
-    return t.includes(q) || codeLower.includes(q)
-  })
+<template>
+  <v-app>
+    <v-container fluid class="pa-0">
+      <v-row no-gutters>
+        <!-- Sidebar -->
+        <v-col
+          cols="12"
+          md="3"
+          class="bg-grey-lighten-4 border-e border-grey-lighten-2 vh-100"
+        >
+          <v-card flat class="bg-transparent">
+            <v-card-title class="text-h5 font-weight-bold pa-6">
+              <v-icon color="primary" size="28" class="mr-2">mdi-cog</v-icon>
+              Paramètres du Site
+            </v-card-title>
+
+            <v-list nav class="px-2">
+              <v-list-item
+                v-for="item in menuItems"
+                :key="item.id"
+                :active="activeSection === item.id"
+                @click="activeSection = item.id"
+                rounded="lg"
+                class="mb-1"
+                :class="{
+                  'v-list-item--active-custom': activeSection === item.id,
+                }"
+              >
+                <template #prepend>
+                  <v-icon :icon="item.icon"></v-icon>
+                </template>
+                <v-list-item-title>{{ item.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </v-col>
+
+        <!-- Content -->
+        <v-col cols="12" md="9" class="bg-grey-lighten-5 vh-100">
+          <v-container class="py-8 px-6">
+            <!-- Preview -->
+            <v-card
+              elevation="0"
+              class="mb-6 rounded-xl border border-grey-lighten-2"
+            >
+              <v-card-text class="pa-6">
+                <div class="d-flex align-center justify-space-between mb-4">
+                  <h2 class="text-h5 font-weight-bold">Aperçu en temps réel</h2>
+                  <v-chip
+                    :color="
+                      colorMode === 'light'
+                        ? settings.colors.light.primaryColor
+                        : settings.colors.dark.primaryColor
+                    "
+                    variant="flat"
+                    class="px-4"
+                  >
+                    Mode {{ colorMode === 'light' ? 'Clair' : 'Sombre' }}
+                  </v-chip>
+                </div>
+
+                <v-card
+                  :style="{
+                    background:
+                      colorMode === 'light'
+                        ? `linear-gradient(135deg, ${settings.colors.light.primaryColor}, ${settings.colors.light.secondaryColor})`
+                        : `linear-gradient(135deg, ${settings.colors.dark.primaryColor}, ${settings.colors.dark.secondaryColor})`,
+                    borderRadius: '16px',
+                  }"
+                  class="preview-demo pa-8 elevation-4"
+                >
+                  <div class="text-center">
+                    <v-avatar
+                      size="100"
+                      class="mb-4 border-white border-opacity-75 border-width-4"
+                    >
+                      <img
+                        v-if="settings.images.logo"
+                        :src="settings.images.logo"
+                        alt="Logo"
+                      />
+                      <v-icon v-else size="64" color="white">mdi-image</v-icon>
+                    </v-avatar>
+                    <h3 class="text-h4 font-weight-bold mb-2 text-white">
+                      Mon Site Web
+                    </h3>
+                    <p class="text-subtitle-1 text-white text-opacity-75">
+                      Design moderne et élégant
+                    </p>
+                  </div>
+                </v-card>
+              </v-card-text>
+            </v-card>
+
+            <!-- Colors & Images -->
+            <v-card
+              v-show="activeSection === 'colors'"
+              elevation="0"
+              class="settings-card mb-6 rounded-xl border border-grey-lighten-2"
+            >
+              <v-card-title
+                class="text-h5 font-weight-bold pa-6 d-flex align-center"
+              >
+                <v-icon color="primary" class="mr-3">mdi-palette</v-icon>
+                Couleurs & Images
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-6">
+                <v-tabs v-model="colorMode" color="primary" class="mb-6">
+                  <v-tab value="light"
+                    ><v-icon class="mr-2">mdi-white-balance-sunny</v-icon>Mode
+                    Clair</v-tab
+                  >
+                  <v-tab value="dark"
+                    ><v-icon class="mr-2">mdi-moon-waning-crescent</v-icon>Mode
+                    Sombre</v-tab
+                  >
+                </v-tabs>
+
+                <v-window v-model="colorMode">
+                  <v-window-item
+                    v-for="mode in ['light', 'dark']"
+                    :key="mode"
+                    :value="mode"
+                  >
+                    <h3 class="text-h6 font-weight-medium mb-4">
+                      Couleurs du thème
+                      {{ mode === 'light' ? 'clair' : 'sombre' }}
+                    </h3>
+                    <v-row>
+                      <v-col
+                        v-for="(label, key) in colorLabels"
+                        :key="key"
+                        cols="12"
+                        md="6"
+                      >
+                        <div
+                          :class="`pa-4 rounded-lg ${
+                            mode === 'light'
+                              ? 'bg-grey-lighten-3'
+                              : 'bg-grey-darken-3'
+                          }`"
+                        >
+                          <label
+                            class="text-subtitle-1 font-weight-medium mb-2 d-block"
+                            >{{ label }}</label
+                          >
+                          <div class="d-flex align-center">
+                            <input
+                              type="color"
+                              v-model="settings.colors[mode][key]"
+                              class="color-input"
+                            />
+                            <v-text-field
+                              v-model="settings.colors[mode][key]"
+                              variant="outlined"
+                              density="comfortable"
+                              hide-details
+                              class="ml-3"
+                            />
+                          </div>
+                        </div>
+                      </v-col>
+                    </v-row>
+                  </v-window-item>
+                </v-window>
+
+                <v-divider class="my-8"></v-divider>
+
+                <h3 class="text-h6 font-weight-medium mb-4">
+                  <v-icon class="mr-2">mdi-image-multiple</v-icon>Images & Logo
+                </h3>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <div>
+                      <label
+                        class="text-subtitle-1 font-weight-medium mb-3 d-block"
+                        >Logo du site</label
+                      >
+                      <v-card
+                        class="image-preview rounded-lg border-dashed border-2 border-grey-lighten-2 elevation-0"
+                        @click="logoInput?.click()"
+                      >
+                        <v-img
+                          v-if="settings.images.logo"
+                          :src="settings.images.logo"
+                          height="200"
+                          cover
+                          class="rounded-lg"
+                        />
+                        <div
+                          v-else
+                          class="upload-placeholder d-flex flex-column align-center justify-center h-100 bg-grey-lighten-3 rounded-lg text-grey"
+                        >
+                          <v-icon size="64">mdi-image-plus</v-icon>
+                          <p class="mt-3">Cliquez pour uploader</p>
+                        </div>
+                      </v-card>
+                      <input
+                        ref="logoInput"
+                        type="file"
+                        accept="image/*"
+                        @change="(e) => handleImageUpload(e, 'logo', logoInput)"
+                        class="d-none"
+                      />
+                      <v-btn
+                        v-if="settings.images.logo"
+                        @click="settings.images.logo = ''"
+                        color="error"
+                        variant="text"
+                        size="small"
+                        class="mt-2"
+                      >
+                        <v-icon class="mr-1">mdi-delete</v-icon>Supprimer
+                      </v-btn>
+                    </div>
+                  </v-col>
+
+                  <v-col cols="12" md="6">
+                    <div>
+                      <label
+                        class="text-subtitle-1 font-weight-medium mb-3 d-block"
+                        >Image de fond</label
+                      >
+                      <v-card
+                        class="image-preview rounded-lg border-dashed border-2 border-grey-lighten-2 elevation-0"
+                        @click="bgInput?.click()"
+                      >
+                        <v-img
+                          v-if="settings.images.background"
+                          :src="settings.images.background"
+                          height="200"
+                          cover
+                          class="rounded-lg"
+                        />
+                        <div
+                          v-else
+                          class="upload-placeholder d-flex flex-column align-center justify-center h-100 bg-grey-lighten-3 rounded-lg text-grey"
+                        >
+                          <v-icon size="64">mdi-image-plus</v-icon>
+                          <p class="mt-3">Cliquez pour uploader</p>
+                        </div>
+                      </v-card>
+                      <input
+                        ref="bgInput"
+                        type="file"
+                        accept="image/*"
+                        @change="
+                          (e) => handleImageUpload(e, 'background', bgInput)
+                        "
+                        class="d-none"
+                      />
+                      <v-btn
+                        v-if="settings.images.background"
+                        @click="settings.images.background = ''"
+                        color="error"
+                        variant="text"
+                        size="small"
+                        class="mt-2"
+                      >
+                        <v-icon class="mr-1">mdi-delete</v-icon>Supprimer
+                      </v-btn>
+                    </div>
+                  </v-col>
+                </v-row>
+
+                <v-divider class="my-8"></v-divider>
+
+                <h3 class="text-h6 font-weight-medium mb-4">
+                  Palettes prédéfinies
+                </h3>
+                <div class="d-flex flex-wrap ga-3">
+                  <v-btn
+                    v-for="preset in colorPresets"
+                    :key="preset.name"
+                    @click="applyColorPreset(preset)"
+                    variant="outlined"
+                    size="large"
+                    class="preset-btn text-capitalize font-weight-medium"
+                  >
+                    <span class="d-flex align-center">
+                      <span
+                        v-for="color in [preset.primary, preset.secondary]"
+                        :key="color"
+                        class="color-dot border-2 border-surface shadow-sm"
+                        :style="{ backgroundColor: color }"
+                      />
+                      {{ preset.name }}
+                    </span>
+                  </v-btn>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <!-- General -->
+            <v-card
+              v-show="activeSection === 'general'"
+              elevation="0"
+              class="settings-card mb-6 rounded-xl border border-grey-lighten-2"
+            >
+              <v-card-title
+                class="text-h5 font-weight-bold pa-6 d-flex align-center"
+              >
+                <v-icon color="primary" class="mr-3">mdi-tune</v-icon>
+                Paramètres Généraux
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-6">
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <v-date-input
+                      v-model="selectedDateForInput"
+                      :min="minDateTomorrow"
+                      label="Sélectionnez une date (Min: Demain)"
+                      clearable
+                      variant="outlined"
+                      density="comfortable"
+                    />
+                    <p class="text-caption mt-2 text-grey">
+                      Date minimale autorisée : {{ minDateTomorrow }}
+                    </p>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+
+            <!-- Actions -->
+            <v-card
+              elevation="0"
+              class="actions-card rounded-xl border border-grey-lighten-2"
+            >
+              <v-card-text
+                class="pa-6 d-flex justify-space-between align-center flex-wrap ga-3"
+              >
+                <p class="text-subtitle-2 text-grey">
+                  Dernière sauvegarde : {{ lastSaved || 'Jamais' }}
+                </p>
+                <div class="d-flex ga-3">
+                  <v-btn
+                    @click="resetSettings"
+                    variant="outlined"
+                    size="large"
+                    color="error"
+                    ><v-icon class="mr-2">mdi-refresh</v-icon
+                    >Réinitialiser</v-btn
+                  >
+                  <v-btn
+                    @click="saveSettings"
+                    color="primary"
+                    size="large"
+                    variant="flat"
+                    class="px-8 text-capitalize font-weight-medium"
+                  >
+                    <v-icon class="mr-2">mdi-content-save</v-icon>Sauvegarder
+                  </v-btn>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-container>
+        </v-col>
+      </v-row>
+    </v-container>
+
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+      location="top"
+    >
+      {{ snackbar.text }}
+      <template #actions
+        ><v-btn variant="text" @click="snackbar.show = false"
+          >Fermer</v-btn
+        ></template
+      >
+    </v-snackbar>
+  </v-app>
+</template>
+
+<script setup>
+import { ref, computed, watch, onMounted } from 'vue';
+import { useTheme } from 'vuetify';
+
+const MAX_IMAGE_SIZE_MB = 2;
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+];
+
+const defaultSettings = {
+  colors: {
+    light: {
+      primaryColor: '#2196F3',
+      secondaryColor: '#00BCD4',
+      accentColor: '#FF5722',
+      backgroundColor: '#F5F5F5',
+    },
+    dark: {
+      primaryColor: '#1976D2',
+      secondaryColor: '#0097A7',
+      accentColor: '#F4511E',
+      backgroundColor: '#121212',
+    },
+  },
+  images: { logo: '', background: '' },
+};
+
+const settings = ref(structuredClone(defaultSettings));
+const colorMode = ref('light');
+const activeSection = ref('colors');
+const lastSaved = ref('');
+const logoInput = ref(null);
+const bgInput = ref(null);
+const selectedDateForInput = ref(null);
+const snackbar = ref({ show: false, text: '', color: 'success' });
+const theme = useTheme();
+
+const colorLabels = {
+  primaryColor: 'Couleur Principale',
+  secondaryColor: 'Couleur Secondaire',
+  accentColor: "Couleur d'Accent",
+  backgroundColor: 'Couleur de Fond',
+};
+
+const minDateTomorrow = computed(() => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+});
+
+const menuItems = [
+  { id: 'colors', title: 'Couleurs & Images', icon: 'mdi-palette' },
+  { id: 'general', title: 'Général', icon: 'mdi-tune' },
+];
+
+const colorPresets = [
+  {
+    name: 'Ocean',
+    primary: '#0077BE',
+    secondary: '#00B4D8',
+    accent: '#90E0EF',
+    background: '#F0F9FF',
+  },
+  {
+    name: 'Forêt',
+    primary: '#2D6A4F',
+    secondary: '#52B788',
+    accent: '#95D5B2',
+    background: '#F1FAEE',
+  },
+  {
+    name: 'Sunset',
+    primary: '#F72585',
+    secondary: '#B5179E',
+    accent: '#7209B7',
+    background: '#FFF0F6',
+  },
+  {
+    name: 'Moderne',
+    primary: '#2C3E50',
+    secondary: '#34495E',
+    accent: '#3498DB',
+    background: '#ECF0F1',
+  },
+];
+
+const updateTheme = () => {
+  const mode = colorMode.value;
+  const c = settings.value.colors[mode];
+  theme.global.name.value = mode;
+  Object.assign(theme.themes.value[mode].colors, {
+    primary: c.primaryColor,
+    secondary: c.secondaryColor,
+    accent: c.accentColor,
+    background: c.backgroundColor,
+    surface: mode === 'light' ? '#FFFFFF' : '#212121',
+    error: '#FF5252',
+  });
+};
+
+const loadSettings = () => {
+  try {
+    const stored = localStorage.getItem('siteSettings');
+    if (stored) settings.value = JSON.parse(stored);
+    const d = localStorage.getItem('siteSettingsDate');
+    if (d) lastSaved.value = new Date(d).toLocaleString('fr-FR');
+    const m = localStorage.getItem('colorMode');
+    if (m === 'light' || m === 'dark') colorMode.value = m;
+  } catch {}
+  updateTheme();
+};
+
+const saveSettings = () => {
+  localStorage.setItem('siteSettings', JSON.stringify(settings.value));
+  localStorage.setItem('siteSettingsDate', new Date().toISOString());
+  localStorage.setItem('colorMode', colorMode.value);
+  lastSaved.value = new Date().toLocaleString('fr-FR');
+  snackbar.value = {
+    show: true,
+    text: 'Paramètres sauvegardés.',
+    color: 'success',
+  };
+};
+
+const resetSettings = () => {
+  if (!confirm('Réinitialiser tous les paramètres ?')) return;
+  settings.value = structuredClone(defaultSettings);
+  colorMode.value = 'light';
+  localStorage.clear();
+  lastSaved.value = '';
+  updateTheme();
+  snackbar.value = {
+    show: true,
+    text: 'Paramètres réinitialisés.',
+    color: 'info',
+  };
+};
+
+const applyColorPreset = (preset) => {
+  const mode = colorMode.value;
+  Object.assign(settings.value.colors[mode], {
+    primaryColor: preset.primary,
+    secondaryColor: preset.secondary,
+    accentColor: preset.accent,
+    backgroundColor: preset.background,
+  });
+  updateTheme();
+  snackbar.value = {
+    show: true,
+    text: `Palette "${preset.name}" appliquée.`,
+    color: 'success',
+  };
+};
+
+const resetInput = (refEl) => refEl.value && (refEl.value.value = null);
+const showError = (msg, refEl) => {
+  snackbar.value = { show: true, text: msg, color: 'error' };
+  resetInput(refEl);
+};
+
+const handleImageUpload = (e, key, inputRef) => {
+  const f = e.target.files?.[0];
+  if (!f) return resetInput(inputRef);
+  if (!ALLOWED_IMAGE_TYPES.includes(f.type))
+    return showError('Type non supporté', inputRef);
+  if (f.size / 1024 / 1024 > MAX_IMAGE_SIZE_MB)
+    return showError('Fichier trop grand', inputRef);
+  const r = new FileReader();
+  r.onload = (ev) => {
+    settings.value.images[key] = ev.target.result;
+    snackbar.value = {
+      show: true,
+      text: 'Image téléchargée.',
+      color: 'success',
+    };
+    resetInput(inputRef);
+  };
+  r.onerror = () => showError('Erreur de lecture', inputRef);
+  r.readAsDataURL(f);
+};
+
+onMounted(loadSettings);
+watch(settings, saveSettings, { deep: true });
+watch(colorMode, updateTheme);
+</script>
+
+<style scoped>
+.v-list-item--active-custom {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--v-theme-primary), 0.1),
+    rgb(var(--v-theme-primary), 0.05)
+  );
+  border-left: 4px solid rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-primary));
 }
-
-const searchResult = (query) => {
-  const q = query.trim().toLowerCase()
-  if (!q) return groupedData.value
-
-  const result = {}
-
-  for (const [domaine, codes] of Object.entries(groupedData.value)) {
-    for (const [codeTrad, items] of Object.entries(codes)) {
-      const filteredItems = filterTrads(items, q, codeTrad.toLowerCase())
-      if (filteredItems.length) {
-        result[domaine] ??= {}
-        result[domaine][codeTrad] = filteredItems
-      }
-    }
-  }
-
-  return result
+.color-input {
+  width: 80px;
+  height: 56px;
+  border: 2px solid rgb(var(--v-theme-grey-lighten-2));
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-const onSearchQuery = useDebounceFn(async () => {
-  const q = searchTrad.value.trim()
-
-  // 1. filtrage
-  filteredData.value = searchResult(q)
-
-  // 2. ouverture
-  if (q) {
-    await openAllWithLoader()   // <<--- ici on appelle ta fonction
-  } else {
-    openedDomains.value = []
-    openedCodes.value = {}
-  }
-}, 250)
-
-const openAllWithLoader = async () => {
-  loader.show()
-  await nextTick() // laisse le temps d'afficher le loader
-
-  const domainKeys = Object.keys(filteredData.value)
-  openedDomains.value = domainKeys
-  openedCodes.value = {}
-
-  let i = 0
-  function step() {
-    if (i >= domainKeys.length) {
-      loader.hide()
-      return
-    }
-    const domain = domainKeys[i]
-    openedCodes.value[domain] = Object.keys(filteredData.value[domain])
-    i++
-    setTimeout(step, 30) // ouvre domaine par domaine
-  }
-  step()
+.color-input:hover {
+  border-color: rgb(var(--v-theme-primary));
+  transform: scale(1.05);
 }
+.color-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.image-preview {
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.image-preview:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+.vh-100 {
+  height: 100vh;
+}
+.border-width-4 {
+  border-width: 4px !important;
+}
+</style>
