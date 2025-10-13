@@ -2,96 +2,9 @@
   <v-app>
     <v-container fluid class="pa-0">
       <v-row no-gutters>
-        <!-- Sidebar -->
-        <v-col
-          cols="12"
-          md="3"
-          class="bg-grey-lighten-4 border-e border-grey-lighten-2 vh-100"
-        >
-          <v-card flat class="bg-transparent">
-            <v-card-title class="text-h5 font-weight-bold pa-6">
-              <v-icon color="primary" size="28" class="mr-2">mdi-cog</v-icon>
-              Paramètres du Site
-            </v-card-title>
-
-            <v-list nav class="px-2">
-              <v-list-item
-                v-for="item in menuItems"
-                :key="item.id"
-                :active="activeSection === item.id"
-                @click="activeSection = item.id"
-                rounded="lg"
-                class="mb-1"
-                :class="{
-                  'v-list-item--active-custom': activeSection === item.id,
-                }"
-              >
-                <template #prepend>
-                  <v-icon :icon="item.icon"></v-icon>
-                </template>
-                <v-list-item-title>{{ item.title }}</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-card>
-        </v-col>
-
         <!-- Content -->
         <v-col cols="12" md="9" class="bg-grey-lighten-5 vh-100">
           <v-container class="py-8 px-6">
-            <!-- Preview -->
-            <v-card
-              elevation="0"
-              class="mb-6 rounded-xl border border-grey-lighten-2"
-            >
-              <v-card-text class="pa-6">
-                <div class="d-flex align-center justify-space-between mb-4">
-                  <h2 class="text-h5 font-weight-bold">Aperçu en temps réel</h2>
-                  <v-chip
-                    :color="
-                      colorMode === 'light'
-                        ? settings.colors.light.primaryColor
-                        : settings.colors.dark.primaryColor
-                    "
-                    variant="flat"
-                    class="px-4"
-                  >
-                    Mode {{ colorMode === 'light' ? 'Clair' : 'Sombre' }}
-                  </v-chip>
-                </div>
-
-                <v-card
-                  :style="{
-                    background:
-                      colorMode === 'light'
-                        ? `linear-gradient(135deg, ${settings.colors.light.primaryColor}, ${settings.colors.light.secondaryColor})`
-                        : `linear-gradient(135deg, ${settings.colors.dark.primaryColor}, ${settings.colors.dark.secondaryColor})`,
-                    borderRadius: '16px',
-                  }"
-                  class="preview-demo pa-8 elevation-4"
-                >
-                  <div class="text-center">
-                    <v-avatar
-                      size="100"
-                      class="mb-4 border-white border-opacity-75 border-width-4"
-                    >
-                      <img
-                        v-if="settings.images.logo"
-                        :src="settings.images.logo"
-                        alt="Logo"
-                      />
-                      <v-icon v-else size="64" color="white">mdi-image</v-icon>
-                    </v-avatar>
-                    <h3 class="text-h4 font-weight-bold mb-2 text-white">
-                      Mon Site Web
-                    </h3>
-                    <p class="text-subtitle-1 text-white text-opacity-75">
-                      Design moderne et élégant
-                    </p>
-                  </div>
-                </v-card>
-              </v-card-text>
-            </v-card>
-
             <!-- Colors & Images -->
             <v-card
               v-show="activeSection === 'colors'"
@@ -265,65 +178,8 @@
                 </v-row>
 
                 <v-divider class="my-8"></v-divider>
-
-                <h3 class="text-h6 font-weight-medium mb-4">
-                  Palettes prédéfinies
-                </h3>
-                <div class="d-flex flex-wrap ga-3">
-                  <v-btn
-                    v-for="preset in colorPresets"
-                    :key="preset.name"
-                    @click="applyColorPreset(preset)"
-                    variant="outlined"
-                    size="large"
-                    class="preset-btn text-capitalize font-weight-medium"
-                  >
-                    <span class="d-flex align-center">
-                      <span
-                        v-for="color in [preset.primary, preset.secondary]"
-                        :key="color"
-                        class="color-dot border-2 border-surface shadow-sm"
-                        :style="{ backgroundColor: color }"
-                      />
-                      {{ preset.name }}
-                    </span>
-                  </v-btn>
-                </div>
               </v-card-text>
             </v-card>
-
-            <!-- General -->
-            <v-card
-              v-show="activeSection === 'general'"
-              elevation="0"
-              class="settings-card mb-6 rounded-xl border border-grey-lighten-2"
-            >
-              <v-card-title
-                class="text-h5 font-weight-bold pa-6 d-flex align-center"
-              >
-                <v-icon color="primary" class="mr-3">mdi-tune</v-icon>
-                Paramètres Généraux
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="pa-6">
-                <v-row>
-                  <v-col cols="12" md="6">
-                    <v-date-input
-                      v-model="selectedDateForInput"
-                      :min="minDateTomorrow"
-                      label="Sélectionnez une date (Min: Demain)"
-                      clearable
-                      variant="outlined"
-                      density="comfortable"
-                    />
-                    <p class="text-caption mt-2 text-grey">
-                      Date minimale autorisée : {{ minDateTomorrow }}
-                    </p>
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-
             <!-- Actions -->
             <v-card
               elevation="0"
@@ -380,6 +236,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useTheme } from 'vuetify';
+const theme = useTheme();
 
 const MAX_IMAGE_SIZE_MB = 2;
 const ALLOWED_IMAGE_TYPES = [
@@ -389,25 +246,14 @@ const ALLOWED_IMAGE_TYPES = [
   'image/webp',
 ];
 
-const defaultSettings = {
+const settings = ref({
   colors: {
-    light: {
-      primaryColor: '#2196F3',
-      secondaryColor: '#00BCD4',
-      accentColor: '#FF5722',
-      backgroundColor: '#F5F5F5',
-    },
-    dark: {
-      primaryColor: '#1976D2',
-      secondaryColor: '#0097A7',
-      accentColor: '#F4511E',
-      backgroundColor: '#121212',
-    },
+    light: { ...theme.themes.value.light.colors },
+    dark: { ...theme.themes.value.dark.colors },
   },
   images: { logo: '', background: '' },
-};
+});
 
-const settings = ref(structuredClone(defaultSettings));
 const colorMode = ref('light');
 const activeSection = ref('colors');
 const lastSaved = ref('');
@@ -415,7 +261,6 @@ const logoInput = ref(null);
 const bgInput = ref(null);
 const selectedDateForInput = ref(null);
 const snackbar = ref({ show: false, text: '', color: 'success' });
-const theme = useTheme();
 
 const colorLabels = {
   primaryColor: 'Couleur Principale',
@@ -433,37 +278,6 @@ const minDateTomorrow = computed(() => {
 const menuItems = [
   { id: 'colors', title: 'Couleurs & Images', icon: 'mdi-palette' },
   { id: 'general', title: 'Général', icon: 'mdi-tune' },
-];
-
-const colorPresets = [
-  {
-    name: 'Ocean',
-    primary: '#0077BE',
-    secondary: '#00B4D8',
-    accent: '#90E0EF',
-    background: '#F0F9FF',
-  },
-  {
-    name: 'Forêt',
-    primary: '#2D6A4F',
-    secondary: '#52B788',
-    accent: '#95D5B2',
-    background: '#F1FAEE',
-  },
-  {
-    name: 'Sunset',
-    primary: '#F72585',
-    secondary: '#B5179E',
-    accent: '#7209B7',
-    background: '#FFF0F6',
-  },
-  {
-    name: 'Moderne',
-    primary: '#2C3E50',
-    secondary: '#34495E',
-    accent: '#3498DB',
-    background: '#ECF0F1',
-  },
 ];
 
 const updateTheme = () => {
@@ -565,48 +379,3 @@ onMounted(loadSettings);
 watch(settings, saveSettings, { deep: true });
 watch(colorMode, updateTheme);
 </script>
-
-<style scoped>
-.v-list-item--active-custom {
-  background: linear-gradient(
-    90deg,
-    rgb(var(--v-theme-primary), 0.1),
-    rgb(var(--v-theme-primary), 0.05)
-  );
-  border-left: 4px solid rgb(var(--v-theme-primary));
-  color: rgb(var(--v-theme-primary));
-}
-.color-input {
-  width: 80px;
-  height: 56px;
-  border: 2px solid rgb(var(--v-theme-grey-lighten-2));
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.color-input:hover {
-  border-color: rgb(var(--v-theme-primary));
-  transform: scale(1.05);
-}
-.color-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  margin-right: 4px;
-}
-.image-preview {
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-.image-preview:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-.vh-100 {
-  height: 100vh;
-}
-.border-width-4 {
-  border-width: 4px !important;
-}
-</style>
