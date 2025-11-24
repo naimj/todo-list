@@ -1,381 +1,272 @@
+<!-- GlobalDialog.vue -->
 <template>
-  <v-app>
-    <v-container fluid class="pa-0">
-      <v-row no-gutters>
-        <!-- Content -->
-        <v-col cols="12" md="9" class="bg-grey-lighten-5 vh-100">
-          <v-container class="py-8 px-6">
-            <!-- Colors & Images -->
-            <v-card
-              v-show="activeSection === 'colors'"
-              elevation="0"
-              class="settings-card mb-6 rounded-xl border border-grey-lighten-2"
-            >
-              <v-card-title
-                class="text-h5 font-weight-bold pa-6 d-flex align-center"
-              >
-                <v-icon color="primary" class="mr-3">mdi-palette</v-icon>
-                Couleurs & Images
-              </v-card-title>
-              <v-divider></v-divider>
-              <v-card-text class="pa-6">
-                <v-tabs v-model="colorMode" color="primary" class="mb-6">
-                  <v-tab value="light"
-                    ><v-icon class="mr-2">mdi-white-balance-sunny</v-icon>Mode
-                    Clair</v-tab
-                  >
-                  <v-tab value="dark"
-                    ><v-icon class="mr-2">mdi-moon-waning-crescent</v-icon>Mode
-                    Sombre</v-tab
-                  >
-                </v-tabs>
+  <v-dialog
+    v-model="localModel"
+    max-width="520"
+    transition="dialog-bottom-transition"
+    scrim="rgba(0,0,0,0.4)"
+  >
+    <v-card class="pa-4">
 
-                <v-window v-model="colorMode">
-                  <v-window-item
-                    v-for="mode in ['light', 'dark']"
-                    :key="mode"
-                    :value="mode"
-                  >
-                    <h3 class="text-h6 font-weight-medium mb-4">
-                      Couleurs du thème
-                      {{ mode === 'light' ? 'clair' : 'sombre' }}
-                    </h3>
-                    <v-row>
-                      <v-col
-                        v-for="(label, key) in colorLabels"
-                        :key="key"
-                        cols="12"
-                        md="6"
-                      >
-                        <div
-                          :class="`pa-4 rounded-lg ${
-                            mode === 'light'
-                              ? 'bg-grey-lighten-3'
-                              : 'bg-grey-darken-3'
-                          }`"
-                        >
-                          <label
-                            class="text-subtitle-1 font-weight-medium mb-2 d-block"
-                            >{{ label }}</label
-                          >
-                          <div class="d-flex align-center">
-                            <input
-                              type="color"
-                              v-model="settings.colors[mode][key]"
-                              class="color-input"
-                            />
-                            <v-text-field
-                              v-model="settings.colors[mode][key]"
-                              variant="outlined"
-                              density="comfortable"
-                              hide-details
-                              class="ml-3"
-                            />
-                          </div>
-                        </div>
-                      </v-col>
-                    </v-row>
-                  </v-window-item>
-                </v-window>
+      <!-- Header -->
+      <v-card-title class="d-flex align-center text-h6 mb-1">
+        <v-icon
+          v-if="icon"
+          :icon="icon"
+          size="24"
+          class="mr-2"
+        />
+        <span>{{ title }}</span>
+      </v-card-title>
 
-                <v-divider class="my-8"></v-divider>
+      <!-- Sous-titre / texte -->
+      <v-card-subtitle v-if="subtitle" class="text-body-2 text-medium-emphasis mb-1">
+        {{ subtitle }}
+      </v-card-subtitle>
 
-                <h3 class="text-h6 font-weight-medium mb-4">
-                  <v-icon class="mr-2">mdi-image-multiple</v-icon>Images & Logo
-                </h3>
-                <v-row>
-                  <v-col cols="12" md="6">
-                    <div>
-                      <label
-                        class="text-subtitle-1 font-weight-medium mb-3 d-block"
-                        >Logo du site</label
-                      >
-                      <v-card
-                        class="image-preview rounded-lg border-dashed border-2 border-grey-lighten-2 elevation-0"
-                        @click="logoInput?.click()"
-                      >
-                        <v-img
-                          v-if="settings.images.logo"
-                          :src="settings.images.logo"
-                          height="200"
-                          cover
-                          class="rounded-lg"
-                        />
-                        <div
-                          v-else
-                          class="upload-placeholder d-flex flex-column align-center justify-center h-100 bg-grey-lighten-3 rounded-lg text-grey"
-                        >
-                          <v-icon size="64">mdi-image-plus</v-icon>
-                          <p class="mt-3">Cliquez pour uploader</p>
-                        </div>
-                      </v-card>
-                      <input
-                        ref="logoInput"
-                        type="file"
-                        accept="image/*"
-                        @change="(e) => handleImageUpload(e, 'logo', logoInput)"
-                        class="d-none"
-                      />
-                      <v-btn
-                        v-if="settings.images.logo"
-                        @click="settings.images.logo = ''"
-                        color="error"
-                        variant="text"
-                        size="small"
-                        class="mt-2"
-                      >
-                        <v-icon class="mr-1">mdi-delete</v-icon>Supprimer
-                      </v-btn>
-                    </div>
-                  </v-col>
+      <!-- Body -->
+      <v-card-text class="text-body-2 text-medium-emphasis">
+        <!-- Slot custom -->
+        <slot name="body">
+          {{ text }}
+        </slot>
+      </v-card-text>
 
-                  <v-col cols="12" md="6">
-                    <div>
-                      <label
-                        class="text-subtitle-1 font-weight-medium mb-3 d-block"
-                        >Image de fond</label
-                      >
-                      <v-card
-                        class="image-preview rounded-lg border-dashed border-2 border-grey-lighten-2 elevation-0"
-                        @click="bgInput?.click()"
-                      >
-                        <v-img
-                          v-if="settings.images.background"
-                          :src="settings.images.background"
-                          height="200"
-                          cover
-                          class="rounded-lg"
-                        />
-                        <div
-                          v-else
-                          class="upload-placeholder d-flex flex-column align-center justify-center h-100 bg-grey-lighten-3 rounded-lg text-grey"
-                        >
-                          <v-icon size="64">mdi-image-plus</v-icon>
-                          <p class="mt-3">Cliquez pour uploader</p>
-                        </div>
-                      </v-card>
-                      <input
-                        ref="bgInput"
-                        type="file"
-                        accept="image/*"
-                        @change="
-                          (e) => handleImageUpload(e, 'background', bgInput)
-                        "
-                        class="d-none"
-                      />
-                      <v-btn
-                        v-if="settings.images.background"
-                        @click="settings.images.background = ''"
-                        color="error"
-                        variant="text"
-                        size="small"
-                        class="mt-2"
-                      >
-                        <v-icon class="mr-1">mdi-delete</v-icon>Supprimer
-                      </v-btn>
-                    </div>
-                  </v-col>
-                </v-row>
+      <v-divider class="my-3" />
 
-                <v-divider class="my-8"></v-divider>
-              </v-card-text>
-            </v-card>
-            <!-- Actions -->
-            <v-card
-              elevation="0"
-              class="actions-card rounded-xl border border-grey-lighten-2"
-            >
-              <v-card-text
-                class="pa-6 d-flex justify-space-between align-center flex-wrap ga-3"
-              >
-                <p class="text-subtitle-2 text-grey">
-                  Dernière sauvegarde : {{ lastSaved || 'Jamais' }}
-                </p>
-                <div class="d-flex ga-3">
-                  <v-btn
-                    @click="resetSettings"
-                    variant="outlined"
-                    size="large"
-                    color="error"
-                    ><v-icon class="mr-2">mdi-refresh</v-icon
-                    >Réinitialiser</v-btn
-                  >
-                  <v-btn
-                    @click="saveSettings"
-                    color="primary"
-                    size="large"
-                    variant="flat"
-                    class="px-8 text-capitalize font-weight-medium"
-                  >
-                    <v-icon class="mr-2">mdi-content-save</v-icon>Sauvegarder
-                  </v-btn>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-container>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="3000"
-      location="top"
-    >
-      {{ snackbar.text }}
-      <template #actions
-        ><v-btn variant="text" @click="snackbar.show = false"
-          >Fermer</v-btn
-        ></template
-      >
-    </v-snackbar>
-  </v-app>
+      <!-- Actions -->
+      <v-card-actions class="justify-end ga-2">
+        <v-btn
+          v-for="btn in visibleButtons"
+          :key="btn.key"
+          :color="btn.color || 'primary'"
+          :variant="btn.variant || 'flat'"
+          :prepend-icon="btn.icon"
+          :loading="btn.loading"
+          :disabled="btn.disabled"
+          :size="btn.size || 'default'"
+          @click="onBtnClick(btn)"
+        >
+          {{ btn.label }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
-import { useTheme } from 'vuetify';
-const theme = useTheme();
+import { computed } from 'vue'
 
-const MAX_IMAGE_SIZE_MB = 2;
-const ALLOWED_IMAGE_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'image/gif',
-  'image/webp',
-];
-
-const settings = ref({
-  colors: {
-    light: { ...theme.themes.value.light.colors },
-    dark: { ...theme.themes.value.dark.colors },
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
   },
-  images: { logo: '', background: '' },
-});
+  title: {
+    type: String,
+    default: '',
+  },
+  subtitle: {
+    type: String,
+    default: '',
+  },
+  text: {
+    type: String,
+    default: '',
+  },
+  icon: {
+    type: String,
+    default: null,
+  },
+  /**
+   * Tableau de boutons :
+   * [
+   *   {
+   *     key: 'delete',
+   *     label: 'Supprimer',
+   *     color: 'error',
+   *     variant: 'flat',
+   *     icon: 'mdi-delete',
+   *     show: true,          // optionnel (par défaut: true)
+   *     close: true,         // optionnel (par défaut: true)
+   *     disabled: false,     // optionnel
+   *     loading: false,      // optionnel
+   *   }
+   * ]
+   */
+  buttons: {
+    type: Array,
+    default: () => [],
+  },
+})
 
-const colorMode = ref('light');
-const activeSection = ref('colors');
-const lastSaved = ref('');
-const logoInput = ref(null);
-const bgInput = ref(null);
-const selectedDateForInput = ref(null);
-const snackbar = ref({ show: false, text: '', color: 'success' });
+const emit = defineEmits(['update:modelValue', 'action'])
 
-const colorLabels = {
-  primaryColor: 'Couleur Principale',
-  secondaryColor: 'Couleur Secondaire',
-  accentColor: "Couleur d'Accent",
-  backgroundColor: 'Couleur de Fond',
-};
+const localModel = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val),
+})
 
-const minDateTomorrow = computed(() => {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
-});
+const visibleButtons = computed(() =>
+  props.buttons.filter((btn) => btn.show !== false),
+)
 
-const menuItems = [
-  { id: 'colors', title: 'Couleurs & Images', icon: 'mdi-palette' },
-  { id: 'general', title: 'Général', icon: 'mdi-tune' },
-];
+const onBtnClick = (btn) => {
+  // remonte l'action au parent avec l'objet complet et la clé
+  emit('action', btn.key, btn)
 
-const updateTheme = () => {
-  const mode = colorMode.value;
-  const c = settings.value.colors[mode];
-  theme.global.name.value = mode;
-  Object.assign(theme.themes.value[mode].colors, {
-    primary: c.primaryColor,
-    secondary: c.secondaryColor,
-    accent: c.accentColor,
-    background: c.backgroundColor,
-    surface: mode === 'light' ? '#FFFFFF' : '#212121',
-    error: '#FF5252',
-  });
-};
+  // On ferme par défaut, sauf si close === false
+  if (btn.close !== false) {
+    emit('update:modelValue', false)
+  }
+}
+</script>
 
-const loadSettings = () => {
-  try {
-    const stored = localStorage.getItem('siteSettings');
-    if (stored) settings.value = JSON.parse(stored);
-    const d = localStorage.getItem('siteSettingsDate');
-    if (d) lastSaved.value = new Date(d).toLocaleString('fr-FR');
-    const m = localStorage.getItem('colorMode');
-    if (m === 'light' || m === 'dark') colorMode.value = m;
-  } catch {}
-  updateTheme();
-};
 
-const saveSettings = () => {
-  localStorage.setItem('siteSettings', JSON.stringify(settings.value));
-  localStorage.setItem('siteSettingsDate', new Date().toISOString());
-  localStorage.setItem('colorMode', colorMode.value);
-  lastSaved.value = new Date().toLocaleString('fr-FR');
-  snackbar.value = {
-    show: true,
-    text: 'Paramètres sauvegardés.',
-    color: 'success',
-  };
-};
+----------------------------------------------------
+<!-- ParentExample.vue -->
+<template>
+  <v-btn color="primary" @click="openDeleteDialog">
+    Ouvrir dialog de suppression
+  </v-btn>
 
-const resetSettings = () => {
-  if (!confirm('Réinitialiser tous les paramètres ?')) return;
-  settings.value = structuredClone(defaultSettings);
-  colorMode.value = 'light';
-  localStorage.clear();
-  lastSaved.value = '';
-  updateTheme();
-  snackbar.value = {
-    show: true,
-    text: 'Paramètres réinitialisés.',
-    color: 'info',
-  };
-};
+  <v-btn color="secondary" class="ml-2" @click="openConfirmDialog">
+    Ouvrir dialog de confirmation
+  </v-btn>
 
-const applyColorPreset = (preset) => {
-  const mode = colorMode.value;
-  Object.assign(settings.value.colors[mode], {
-    primaryColor: preset.primary,
-    secondaryColor: preset.secondary,
-    accentColor: preset.accent,
-    backgroundColor: preset.background,
-  });
-  updateTheme();
-  snackbar.value = {
-    show: true,
-    text: `Palette "${preset.name}" appliquée.`,
-    color: 'success',
-  };
-};
+  <GlobalDialog
+    v-model="dialog.visible"
+    :title="dialog.title"
+    :subtitle="dialog.subtitle"
+    :text="dialog.text"
+    :icon="dialog.icon"
+    :buttons="dialog.buttons"
+    @action="handleDialogAction"
+  >
+    <!-- Exemple d'utilisation du slot body (optionnel) -->
+    <template #body v-if="dialog.useCustomBody">
+      <p class="mb-2">
+        Tu es sur le point de supprimer
+        <strong>{{ itemName }}</strong>.
+      </p>
+      <p class="text-caption text-medium-emphasis">
+        Cette action est irréversible.
+      </p>
+    </template>
+  </GlobalDialog>
+</template>
 
-const resetInput = (refEl) => refEl.value && (refEl.value.value = null);
-const showError = (msg, refEl) => {
-  snackbar.value = { show: true, text: msg, color: 'error' };
-  resetInput(refEl);
-};
+<script setup>
+import { reactive, ref } from 'vue'
+import GlobalDialog from '@/components/GlobalDialog.vue'
 
-const handleImageUpload = (e, key, inputRef) => {
-  const f = e.target.files?.[0];
-  if (!f) return resetInput(inputRef);
-  if (!ALLOWED_IMAGE_TYPES.includes(f.type))
-    return showError('Type non supporté', inputRef);
-  if (f.size / 1024 / 1024 > MAX_IMAGE_SIZE_MB)
-    return showError('Fichier trop grand', inputRef);
-  const r = new FileReader();
-  r.onload = (ev) => {
-    settings.value.images[key] = ev.target.result;
-    snackbar.value = {
+const itemName = ref('Utilisateur #123')
+
+const dialog = reactive({
+  visible: false,
+  title: '',
+  subtitle: '',
+  text: '',
+  icon: null,
+  buttons: [],
+  useCustomBody: false,
+})
+
+const openDeleteDialog = () => {
+  dialog.title = 'Confirmer la suppression'
+  dialog.subtitle = 'Action irréversible'
+  dialog.text = 'Souhaites-tu vraiment supprimer cet élément ?'
+  dialog.icon = 'mdi-alert-circle-outline'
+  dialog.useCustomBody = true
+
+  dialog.buttons = [
+    {
+      key: 'cancel',
+      label: 'Annuler',
+      color: 'grey',
+      variant: 'text',
       show: true,
-      text: 'Image téléchargée.',
-      color: 'success',
-    };
-    resetInput(inputRef);
-  };
-  r.onerror = () => showError('Erreur de lecture', inputRef);
-  r.readAsDataURL(f);
-};
+      close: true,
+    },
+    {
+      key: 'delete',
+      label: 'Supprimer',
+      color: 'error',
+      variant: 'flat',
+      icon: 'mdi-delete',
+      show: true,           // ou une condition
+      close: true,          // le dialog se ferme quand on clique
+      disabled: false,      // peut dépendre d’un état
+      loading: false,       // pour un loader durant l’axios
+    },
+  ]
 
-onMounted(loadSettings);
-watch(settings, saveSettings, { deep: true });
-watch(colorMode, updateTheme);
+  dialog.visible = true
+}
+
+const openConfirmDialog = () => {
+  dialog.title = 'Valider les modifications'
+  dialog.subtitle = ''
+  dialog.text = 'Veux-tu enregistrer ces changements ?'
+  dialog.icon = 'mdi-check-decagram-outline'
+  dialog.useCustomBody = false
+
+  dialog.buttons = [
+    {
+      key: 'no',
+      label: 'Non',
+      color: 'grey',
+      variant: 'text',
+      show: true,
+      close: true,
+    },
+    {
+      key: 'yes',
+      label: 'Oui, enregistrer',
+      color: 'primary',
+      variant: 'flat',
+      icon: 'mdi-content-save',
+      show: true,
+      close: false, // on garde le dialog ouvert le temps de l’axios
+    },
+  ]
+
+  dialog.visible = true
+}
+
+const handleDialogAction = async (key, btn) => {
+  if (key === 'cancel' || key === 'no') {
+    return
+  }
+
+  if (key === 'delete') {
+    // Exemple: appel API de suppression
+    await deleteItem()
+    // ici, on a close = true, donc le dialog est déjà fermé
+  }
+
+  if (key === 'yes') {
+    // Exemple: on force le loading sur le bouton "yes"
+    btn.loading = true
+    btn.disabled = true
+
+    try {
+      await saveChanges()
+      dialog.visible = false
+    } finally {
+      btn.loading = false
+      btn.disabled = false
+    }
+  }
+}
+
+const deleteItem = async () => {
+  // ton appel axios ou autre
+  console.log('Suppression côté API...')
+}
+
+const saveChanges = async () => {
+  // ton appel axios ou autre
+  console.log('Sauvegarde côté API...')
+}
 </script>
