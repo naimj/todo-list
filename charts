@@ -1,11 +1,15 @@
-  // Excel
-  'application/vnd.ms-excel', // .xls
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+app/Exceptions/Handler.php :
 
-  // CSV
-  'text/csv',
-  'application/csv',
-  'text/comma-separated-values',
+use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-  // TXT
-  'text/plain',
+public function render($request, Throwable $e)
+{
+    if ($e instanceof NotFoundHttpException && $request->expectsJson() === false) {
+        return Inertia::render('Errors/404')
+            ->toResponse($request)
+            ->setStatusCode(404);
+    }
+
+    return parent::render($request, $e);
+}
