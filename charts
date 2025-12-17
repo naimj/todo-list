@@ -1,15 +1,5 @@
-app/Exceptions/Handler.php :
-
-use Inertia\Inertia;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-
-public function render($request, Throwable $e)
-{
-    if ($e instanceof NotFoundHttpException && $request->expectsJson() === false) {
-        return Inertia::render('Errors/404')
-            ->toResponse($request)
-            ->setStatusCode(404);
-    }
-
-    return parent::render($request, $e);
-}
+if (! $request->expectsJson()) {
+            return Inertia::render('Errors/404')
+                ->toResponse($request)
+                ->setStatusCode(404);
+        }
